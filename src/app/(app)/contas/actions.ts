@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { iniciarAutorizacao } from "@/lib/enablebanking/client";
 import { createClient } from "@/lib/supabase/server";
 
-const DIAS_VALIDADE = 180; // máximo PSD2; o banco pode encurtar
+// Máximo PSD2 são 180 dias exatos; pedimos menos 1h de margem para
+// desvios de relógio entre o cliente e a Enable Banking (senão: 422).
+const VALIDADE_MS = 180 * 24 * 60 * 60 * 1000 - 60 * 60 * 1000;
 
 export async function ligarBanco(formData: FormData) {
   const aspspName = formData.get("aspsp_name") as string;
@@ -25,9 +27,7 @@ export async function ligarBanco(formData: FormData) {
   }
 
   const state = randomUUID();
-  const validUntil = new Date(
-    Date.now() + DIAS_VALIDADE * 24 * 60 * 60 * 1000
-  ).toISOString();
+  const validUntil = new Date(Date.now() + VALIDADE_MS).toISOString();
 
   let urlBanco: string;
   try {
