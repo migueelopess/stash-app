@@ -79,7 +79,9 @@ export default async function ContasPage({
   if (configurado) {
     try {
       const todos = await listarAspsps();
-      bancosDisponiveis = todos.filter((b) => BANCOS_SUPORTADOS.test(b.name));
+      bancosDisponiveis = todos.filter(
+        (b) => b.country === "PT" && BANCOS_SUPORTADOS.test(b.name)
+      );
     } catch (e) {
       console.error("Erro ao listar bancos Enable Banking:", e);
       erroAspsps = true;
