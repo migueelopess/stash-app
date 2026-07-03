@@ -1,0 +1,178 @@
+{
+  "accounts": [
+    {
+      "info": {
+        "name": "Miguel Lopes",
+        "details": "Conta à ordem",
+        "currency": "EUR",
+        "cash_account_type": "CACC",
+        "usage": "PRIV",
+        "psu_status": "Account Holder",
+        "product": "Conta à ordem",
+        "account_id": {
+          "iban": "PT50000201231234567890154",
+          "other": null
+        },
+        "all_account_ids": [
+          {
+            "scheme_name": "IBAN",
+            "identification": "PT50000201231234567890154",
+            "issuer": null
+          }
+        ]
+      },
+      "balances": [
+        {
+          "name": "Saldo contabilístico",
+          "balance_amount": { "currency": "EUR", "amount": "1543.27" },
+          "balance_type": "CLBD",
+          "reference_date": "2026-07-03",
+          "last_change_date_time": null,
+          "last_committed_transaction": null
+        },
+        {
+          "name": "Saldo disponível",
+          "balance_amount": { "currency": "EUR", "amount": "1543.27" },
+          "balance_type": "ITAV",
+          "reference_date": "2026-07-03",
+          "last_change_date_time": null,
+          "last_committed_transaction": null
+        }
+      ],
+      "transactions": [
+        {
+          "entry_reference": "TX-0001",
+          "transaction_amount": { "currency": "EUR", "amount": "480.00" },
+          "credit_debit_indicator": "CRDT",
+          "status": "BOOK",
+          "booking_date": "2026-07-01",
+          "value_date": "2026-07-01",
+          "remittance_information": ["SALARIO JUNHO"],
+          "debtor": { "name": "TechStore Lda" },
+          "creditor": null
+        },
+        {
+          "entry_reference": "TX-0002",
+          "transaction_amount": { "currency": "EUR", "amount": "23.45" },
+          "credit_debit_indicator": "DBIT",
+          "status": "BOOK",
+          "booking_date": "2026-07-02",
+          "value_date": "2026-07-02",
+          "remittance_information": ["COMPRA CONTINENTE MATOSINHOS"],
+          "creditor": { "name": "CONTINENTE" },
+          "debtor": null
+        },
+        {
+          "entry_reference": "TX-0003",
+          "transaction_amount": { "currency": "EUR", "amount": "25.00" },
+          "credit_debit_indicator": "CRDT",
+          "status": "BOOK",
+          "booking_date": "2026-06-28",
+          "value_date": "2026-06-28",
+          "remittance_information": ["MB WAY TRANSF"],
+          "debtor": { "name": "Ana Lopes" },
+          "creditor": null
+        },
+        {
+          "entry_reference": "TX-0004",
+          "transaction_amount": { "currency": "EUR", "amount": "4.99" },
+          "credit_debit_indicator": "DBIT",
+          "status": "BOOK",
+          "booking_date": "2026-06-27",
+          "value_date": "2026-06-27",
+          "remittance_information": ["SPOTIFY P0000000"],
+          "creditor": { "name": "Spotify AB" },
+          "debtor": null
+        },
+        {
+          "entry_reference": "TX-0005",
+          "transaction_amount": { "currency": "EUR", "amount": "31.90" },
+          "credit_debit_indicator": "DBIT",
+          "status": "BOOK",
+          "booking_date": "2026-06-25",
+          "value_date": "2026-06-25",
+          "remittance_information": ["COMPRA PINGO DOCE"],
+          "creditor": { "name": "PINGO DOCE" },
+          "debtor": null
+        },
+        {
+          "entry_reference": "TX-0006",
+          "transaction_amount": { "currency": "EUR", "amount": "30.00" },
+          "credit_debit_indicator": "DBIT",
+          "status": "BOOK",
+          "booking_date": "2026-06-20",
+          "value_date": "2026-06-20",
+          "remittance_information": ["NAVEGANTE PASSE MENSAL"],
+          "creditor": { "name": "TML" },
+          "debtor": null
+        },
+        {
+          "entry_reference": "TX-0007",
+          "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+          "credit_debit_indicator": "DBIT",
+          "status": "BOOK",
+          "booking_date": "2026-06-15",
+          "value_date": "2026-06-15",
+          "remittance_information": ["CINEMA NOS"],
+          "creditor": { "name": "NOS CINEMAS" },
+          "debtor": null
+        },
+        {
+          "entry_reference": "TX-0008",
+          "transaction_amount": { "currency": "EUR", "amount": "30.00" },
+          "credit_debit_indicator": "CRDT",
+          "status": "BOOK",
+          "booking_date": "2026-06-10",
+          "value_date": "2026-06-10",
+          "remittance_information": ["MB WAY TRANSF"],
+          "debtor": { "name": "Carlos Lopes" },
+          "creditor": null
+        },
+        {
+          "entry_reference": "TX-0009",
+          "transaction_amount": { "currency": "EUR", "amount": "18.75" },
+          "credit_debit_indicator": "DBIT",
+          "status": "BOOK",
+          "booking_date": "2026-06-05",
+          "value_date": "2026-06-05",
+          "remittance_information": ["COMPRA LIDL"],
+          "creditor": { "name": "LIDL" },
+          "debtor": null
+        },
+        {
+          "entry_reference": "TX-0010",
+          "transaction_amount": { "currency": "EUR", "amount": "480.00" },
+          "credit_debit_indicator": "CRDT",
+          "status": "BOOK",
+          "booking_date": "2026-06-01",
+          "value_date": "2026-06-01",
+          "remittance_information": ["SALARIO MAIO"],
+          "debtor": { "name": "TechStore Lda" },
+          "creditor": null
+        },
+        {
+          "entry_reference": "TX-0011",
+          "transaction_amount": { "currency": "EUR", "amount": "15.99" },
+          "credit_debit_indicator": "DBIT",
+          "status": "BOOK",
+          "booking_date": "2026-05-28",
+          "value_date": "2026-05-28",
+          "remittance_information": ["NETFLIX.COM"],
+          "creditor": { "name": "NETFLIX" },
+          "debtor": null
+        },
+        {
+          "entry_reference": "TX-0012",
+          "transaction_amount": { "currency": "EUR", "amount": "45.00" },
+          "credit_debit_indicator": "DBIT",
+          "status": "BOOK",
+          "booking_date": "2026-05-03",
+          "value_date": "2026-05-03",
+          "remittance_information": ["COMPRA WORTEN"],
+          "creditor": { "name": "WORTEN" },
+          "debtor": null
+        }
+      ]
+    }
+  ]
+}

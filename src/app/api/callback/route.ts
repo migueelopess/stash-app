@@ -81,6 +81,22 @@ export async function GET(request: NextRequest) {
       return irPara("/contas?erro=gravar_contas");
     }
 
+    // Remover contas que já não vêm na nova sessão (a autorização antiga
+    // deixou de lhes dar acesso — ficariam órfãs e a falhar no sync)
+    const uidsAtuais = sessao.accounts.map((c) => c.uid);
+    const { error: erroLimpeza } = await supabase
+      .from("accounts")
+      .delete()
+      .eq("connection_id", ligacao.id)
+      .not(
+        "eb_account_uid",
+        "in",
+        `(${uidsAtuais.map((uid) => `"${uid}"`).join(",")})`
+      );
+    if (erroLimpeza) {
+      console.error("Erro ao limpar contas órfãs:", erroLimpeza);
+    }
+
     // Buscar saldos iniciais (não crítico — o sync volta a atualizar)
     for (const conta of sessao.accounts) {
       try {
