@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp, TriangleAlert } from "lucide-react";
+import { BarraProgresso } from "@/components/barra-progresso";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoDonut } from "@/components/graficos/grafico-donut";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
@@ -17,7 +18,7 @@ import {
   somaDoMesPorCategoria,
   type TransacaoDash,
 } from "@/lib/dashboard";
-import { formatarEuros } from "@/lib/format";
+import { diasAte, formatarEuros } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -37,14 +38,24 @@ export default async function DashboardPage() {
   inicioHistorico.setMonth(inicioHistorico.getMonth() - MESES_HISTORICO);
   inicioHistorico.setDate(1);
 
-  const [{ data: contas }, { data: transacoesRaw }] = await Promise.all([
-    supabase.from("accounts").select("balance"),
-    supabase
-      .from("transactions")
-      .select("booking_date, amount, categories (name, color)")
-      .gte("booking_date", inicioHistorico.toISOString().slice(0, 10))
-      .order("booking_date"),
-  ]);
+  const [{ data: contas }, { data: transacoesRaw }, { data: ligacoes }, { data: metas }] =
+    await Promise.all([
+      supabase.from("accounts").select("balance"),
+      supabase
+        .from("transactions")
+        .select("booking_date, amount, categories (name, color)")
+        .gte("booking_date", inicioHistorico.toISOString().slice(0, 10))
+        .order("booking_date"),
+      supabase
+        .from("bank_connections")
+        .select("bank_name, valid_until, status")
+        .eq("status", "active"),
+      supabase
+        .from("goals")
+        .select("id, name, target_amount")
+        .order("created_at")
+        .limit(1),
+    ]);
 
   if (!contas || contas.length === 0) {
     return (
@@ -80,9 +91,32 @@ export default async function DashboardPage() {
   const salarioMes = somaDoMesPorCategoria(transacoes, "Salário");
   const tarefasMes = somaDoMesPorCategoria(transacoes, "Tarefas");
 
+  const aRenovar = (ligacoes ?? []).filter(
+    (ligacao) => diasAte(ligacao.valid_until) <= 14
+  );
+  const meta = metas?.[0];
+  const percentagemMeta = meta
+    ? (saldoTotal / Number(meta.target_amount)) * 100
+    : 0;
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
+
+      {aRenovar.length > 0 && (
+        <Link
+          href="/contas"
+          className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+        >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <span>
+            {aRenovar.length === 1
+              ? `A autorização do ${aRenovar[0].bank_name} expira em breve.`
+              : `${aRenovar.length} autorizações bancárias expiram em breve.`}{" "}
+            Toca para renovar.
+          </span>
+        </Link>
+      )}
 
       <Card>
         <CardContent className="flex flex-col gap-1 pt-2">
@@ -135,6 +169,24 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {meta && (
+        <Card>
+          <CardContent className="flex flex-col gap-2 pt-2">
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <p className="font-medium">Meta: {meta.name}</p>
+              <p className="text-muted-foreground">
+                {Math.min(100, Math.round(percentagemMeta))}%
+              </p>
+            </div>
+            <BarraProgresso percentagem={percentagemMeta} />
+            <p className="text-xs text-muted-foreground">
+              {formatarEuros(saldoTotal)} de{" "}
+              {formatarEuros(Number(meta.target_amount))}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

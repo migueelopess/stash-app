@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, ListChecks, Tags } from "lucide-react";
+import { ChevronRight, ListChecks, PiggyBank, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
@@ -16,6 +16,12 @@ const seccoes = [
     titulo: "Regras de categorização",
     descricao: "Regras que categorizam transações sozinhas",
     icon: ListChecks,
+  },
+  {
+    href: "/definicoes/metas",
+    titulo: "Metas de poupança",
+    descricao: "Objetivos e progresso da tua poupança",
+    icon: PiggyBank,
   },
 ];
 
