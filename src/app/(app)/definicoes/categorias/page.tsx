@@ -70,6 +70,7 @@ export default async function CategoriasPage({
         <Button
           variant="ghost"
           size="icon-sm"
+          nativeButton={false}
           render={<Link href="/definicoes" />}
         >
           <ArrowLeft />

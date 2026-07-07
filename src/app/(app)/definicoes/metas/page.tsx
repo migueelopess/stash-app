@@ -47,6 +47,7 @@ export default async function MetasPage({
         <Button
           variant="ghost"
           size="icon-sm"
+          nativeButton={false}
           render={<Link href="/definicoes" />}
         >
           <ArrowLeft />

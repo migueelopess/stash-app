@@ -47,6 +47,7 @@ export default async function RegrasPage({
         <Button
           variant="ghost"
           size="icon-sm"
+          nativeButton={false}
           render={<Link href="/definicoes" />}
         >
           <ArrowLeft />

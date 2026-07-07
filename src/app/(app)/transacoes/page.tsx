@@ -239,6 +239,7 @@ export default async function TransacoesPage({
       {haMais && (
         <Button
           variant="outline"
+          nativeButton={false}
           render={<Link href={`/transacoes?${paramsProximos.toString()}`} />}
         >
           Carregar mais

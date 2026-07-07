@@ -66,6 +66,7 @@ export default async function TransacaoPage({
         <Button
           variant="ghost"
           size="icon-sm"
+          nativeButton={false}
           render={<Link href="/transacoes" />}
         >
           <ArrowLeft />
