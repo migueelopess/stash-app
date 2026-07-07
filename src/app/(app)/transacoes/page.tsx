@@ -205,9 +205,10 @@ export default async function TransacoesPage({
           {linhas.map((t) => {
             const valor = Number(t.amount);
             return (
-              <div
+              <Link
                 key={t.id}
-                className="flex items-center justify-between gap-3 rounded-md border p-3"
+                href={`/transacoes/${t.id}`}
+                className="flex items-center justify-between gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
@@ -229,7 +230,7 @@ export default async function TransacoesPage({
                   {valor > 0 ? "+" : ""}
                   {formatarEuros(t.amount)}
                 </p>
-              </div>
+              </Link>
             );
           })}
         </div>

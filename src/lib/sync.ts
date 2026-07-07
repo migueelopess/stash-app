@@ -1,6 +1,10 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  aplicarRegras,
+  type RegraCategorizacao,
+} from "@/lib/categorizacao";
 import { obterSaldos, obterTransacoes } from "@/lib/enablebanking/client";
 import type { EbTransaction } from "@/lib/enablebanking/types";
 
@@ -14,6 +18,7 @@ export interface ContaParaSync {
 
 export interface LigacaoParaSync {
   id: string;
+  user_id: string;
   bank_name: string;
   status: string;
   valid_until: string;
@@ -43,13 +48,17 @@ function idTransacao(uid: string, t: EbTransaction): string {
   return `hash-${createHash("sha256").update(base).digest("hex").slice(0, 32)}`;
 }
 
-function mapearTransacao(conta: ContaParaSync, t: EbTransaction) {
+function mapearTransacao(
+  conta: ContaParaSync,
+  t: EbTransaction,
+  regras: RegraCategorizacao[]
+) {
   const valor = Number(t.transaction_amount.amount);
   const sinal = t.credit_debit_indicator === "DBIT" ? -1 : 1;
   const contraparte =
     t.credit_debit_indicator === "DBIT" ? t.creditor?.name : t.debtor?.name;
 
-  return {
+  const linha = {
     account_id: conta.id,
     eb_transaction_id: idTransacao(conta.eb_account_uid, t),
     booking_date: t.booking_date ?? t.value_date ?? dataIso(new Date()),
@@ -59,11 +68,19 @@ function mapearTransacao(conta: ContaParaSync, t: EbTransaction) {
     counterparty: contraparte ?? null,
     raw: t,
   };
+
+  const categoria = aplicarRegras(regras, linha);
+  return {
+    ...linha,
+    category_id: categoria,
+    categorized_by: categoria ? "rule" : "none",
+  };
 }
 
 async function sincronizarConta(
   supabase: SupabaseClient,
-  conta: ContaParaSync
+  conta: ContaParaSync,
+  regras: RegraCategorizacao[]
 ): Promise<number> {
   // Desde a última transação conhecida (com sobreposição), senão 90 dias
   const { data: ultima } = await supabase
@@ -93,7 +110,7 @@ async function sincronizarConta(
 
     const linhas = pagina.transactions
       .filter((t) => (t.status ?? "BOOK") === "BOOK")
-      .map((t) => mapearTransacao(conta, t));
+      .map((t) => mapearTransacao(conta, t, regras));
 
     if (linhas.length > 0) {
       const { count, error } = await supabase
@@ -140,12 +157,22 @@ export async function sincronizarLigacao(
     return { novas: 0, contasComErro: 0 };
   }
 
+  // Regras do dono da ligação, para categorizar as transações novas
+  const { data: regras } = await supabase
+    .from("categorization_rules")
+    .select("id, priority, match_field, match_type, match_value, category_id")
+    .eq("user_id", ligacao.user_id);
+
   let novas = 0;
   let contasComErro = 0;
 
   for (const conta of ligacao.accounts) {
     try {
-      novas += await sincronizarConta(supabase, conta);
+      novas += await sincronizarConta(
+        supabase,
+        conta,
+        (regras ?? []) as RegraCategorizacao[]
+      );
     } catch (e) {
       contasComErro++;
       console.error(
@@ -164,4 +191,4 @@ export async function sincronizarLigacao(
 }
 
 export const SELECT_LIGACOES_SYNC =
-  "id, bank_name, status, valid_until, accounts (id, eb_account_uid)";
+  "id, user_id, bank_name, status, valid_until, accounts (id, eb_account_uid)";
