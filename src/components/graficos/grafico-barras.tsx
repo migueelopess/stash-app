@@ -3,17 +3,15 @@
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { TooltipGrafico } from "./tooltip-grafico";
 
-const euros = new Intl.NumberFormat("pt-PT", {
-  style: "currency",
-  currency: "EUR",
-});
+const COR_GANHOS = "#10b981";
+const COR_GASTOS = "#fb7185";
 
 export function GraficoBarras({
   dados,
@@ -21,37 +19,58 @@ export function GraficoBarras({
   dados: { mes: string; ganhos: number; gastos: number }[];
 }) {
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={dados} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          vertical={false}
-          stroke="var(--border)"
-        />
-        <XAxis
-          dataKey="mes"
-          tickLine={false}
-          axisLine={false}
-          fontSize={12}
-          stroke="var(--muted-foreground)"
-        />
-        <YAxis hide />
-        <Tooltip
-          formatter={(valor, nome) => [
-            euros.format(Number(valor)),
-            nome === "ganhos" ? "Ganhos" : "Gastos",
-          ]}
-          contentStyle={{
-            background: "var(--popover)",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            fontSize: 12,
-          }}
-          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
-        />
-        <Bar dataKey="ganhos" fill="#10b981" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="gastos" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="flex flex-col gap-2">
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart
+          data={dados}
+          margin={{ top: 12, right: 4, left: 4, bottom: 0 }}
+          barGap={5}
+        >
+          <XAxis
+            dataKey="mes"
+            tickLine={false}
+            axisLine={false}
+            fontSize={11}
+            dy={6}
+            stroke="var(--muted-foreground)"
+          />
+          <YAxis hide />
+          <Tooltip
+            content={<TooltipGrafico />}
+            cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+          />
+          <Bar
+            dataKey="ganhos"
+            name="Ganhos"
+            fill={COR_GANHOS}
+            radius={[99, 99, 99, 99]}
+            barSize={10}
+          />
+          <Bar
+            dataKey="gastos"
+            name="Gastos"
+            fill={COR_GASTOS}
+            radius={[99, 99, 99, 99]}
+            barSize={10}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: COR_GANHOS }}
+          />
+          Ganhos
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: COR_GASTOS }}
+          />
+          Gastos
+        </span>
+      </div>
+    </div>
   );
 }

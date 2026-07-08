@@ -205,7 +205,10 @@ export default async function TransacoesPage({
       {[...grupos.entries()].map(([dia, linhas]) => {
         const totalDia = linhas.reduce((soma, t) => soma + Number(t.amount), 0);
         return (
-          <div key={dia} className="flex flex-col gap-1.5">
+          <div
+            key={dia}
+            className="flex flex-col gap-1.5 animate-in fade-in-0 slide-in-from-bottom-2 duration-400"
+          >
             <div className="flex items-baseline justify-between pt-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {formatoDia.format(new Date(dia))}
@@ -228,7 +231,7 @@ export default async function TransacoesPage({
                     key={t.id}
                     href={`/transacoes/${t.id}`}
                     className={cn(
-                      "flex items-center gap-3 p-3 transition-colors hover:bg-muted/50",
+                      "flex items-center gap-3 p-3 transition-all hover:bg-muted/50 active:scale-[0.985] active:bg-muted/60",
                       i > 0 && "border-t border-border/50"
                     )}
                   >

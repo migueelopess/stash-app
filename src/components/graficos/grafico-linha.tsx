@@ -3,17 +3,12 @@
 import {
   Area,
   AreaChart,
-  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-
-const euros = new Intl.NumberFormat("pt-PT", {
-  style: "currency",
-  currency: "EUR",
-});
+import { TooltipGrafico } from "./tooltip-grafico";
 
 export function GraficoLinha({
   dados,
@@ -21,43 +16,44 @@ export function GraficoLinha({
   dados: { dia: string; saldo: number }[];
 }) {
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={dados} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={190}>
+      <AreaChart
+        data={dados}
+        margin={{ top: 8, right: 4, left: 4, bottom: 0 }}
+      >
         <defs>
           <linearGradient id="saldoGradiente" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
+            <stop offset="0%" stopColor="#10b981" stopOpacity={0.28} />
             <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          vertical={false}
-          stroke="var(--border)"
-        />
         <XAxis
           dataKey="dia"
           tickLine={false}
           axisLine={false}
-          fontSize={12}
-          minTickGap={32}
+          fontSize={11}
+          minTickGap={40}
+          dy={6}
           stroke="var(--muted-foreground)"
         />
         <YAxis hide domain={["auto", "auto"]} />
         <Tooltip
-          formatter={(valor) => [euros.format(Number(valor)), "Saldo"]}
-          contentStyle={{
-            background: "var(--popover)",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            fontSize: 12,
+          content={<TooltipGrafico />}
+          cursor={{
+            stroke: "var(--muted-foreground)",
+            strokeDasharray: "3 3",
+            strokeOpacity: 0.4,
           }}
         />
         <Area
           type="monotone"
           dataKey="saldo"
+          name="Saldo"
           stroke="#10b981"
-          strokeWidth={2}
+          strokeWidth={2.5}
           fill="url(#saldoGradiente)"
+          dot={false}
+          activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--card)" }}
         />
       </AreaChart>
     </ResponsiveContainer>

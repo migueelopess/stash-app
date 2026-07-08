@@ -8,6 +8,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
+import { ContadorEuros } from "@/components/contador-euros";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoDonut } from "@/components/graficos/grafico-donut";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
@@ -35,6 +36,11 @@ import { cn } from "@/lib/utils";
 
 const MESES_HISTORICO = 6;
 const DIAS_SERIE_SALDO = 90;
+
+// Entrada em cascata dos blocos do dashboard
+const ANIM =
+  "animate-in fade-in-0 slide-in-from-bottom-3 fill-mode-backwards duration-500";
+const atraso = (i: number) => ({ animationDelay: `${i * 70}ms` });
 
 const formatoMesLongo = new Intl.DateTimeFormat("pt-PT", { month: "long" });
 
@@ -178,12 +184,19 @@ export default async function DashboardPage() {
       )}
 
       {/* Hero: saldo total com gradiente e sparkline */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-5 text-white shadow-lg shadow-emerald-900/20">
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-5 text-white shadow-lg shadow-emerald-900/20",
+          ANIM
+        )}
+        style={atraso(0)}
+      >
         <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-white/10 blur-2xl" />
         <p className="text-sm font-medium text-emerald-100">Saldo total</p>
-        <p className="mt-1 text-4xl font-bold tabular-nums tracking-tight">
-          {formatarEuros(saldoTotal)}
-        </p>
+        <ContadorEuros
+          valor={saldoTotal}
+          className="mt-1 block text-4xl font-extrabold tabular-nums tracking-tight"
+        />
         <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium backdrop-blur">
           {resumo.variacao >= 0 ? (
             <TrendingUp className="size-3.5" />
@@ -199,7 +212,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Cartões de resumo */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className={cn("grid grid-cols-3 gap-2", ANIM)} style={atraso(1)}>
         {[
           {
             rotulo: "Salário",
@@ -240,7 +253,7 @@ export default async function DashboardPage() {
 
       {/* Insight: comparação com o mês anterior */}
       {comparacao && (
-        <Card className="border-none shadow-sm">
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(2)}>
           <CardContent className="flex items-center gap-3 pt-1">
             <span
               className={cn(
@@ -276,7 +289,7 @@ export default async function DashboardPage() {
       )}
 
       {meta && (
-        <Card className="border-none shadow-sm">
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(3)}>
           <CardContent className="flex flex-col gap-2 pt-1">
             <div className="flex items-center justify-between gap-2 text-sm">
               <p className="font-semibold">🎯 {meta.name}</p>
@@ -293,7 +306,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <Card className="border-none shadow-sm">
+      <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(4)}>
         <CardHeader>
           <CardTitle className="text-sm">Ganhos vs. gastos</CardTitle>
         </CardHeader>
@@ -302,7 +315,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-none shadow-sm">
+      <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(5)}>
         <CardHeader>
           <CardTitle className="text-sm">Gastos do mês por categoria</CardTitle>
         </CardHeader>
@@ -318,7 +331,7 @@ export default async function DashboardPage() {
       </Card>
 
       {topGastos.length > 0 && (
-        <Card className="border-none shadow-sm">
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(6)}>
           <CardHeader>
             <CardTitle className="text-sm">Maiores gastos do mês</CardTitle>
           </CardHeader>
@@ -350,7 +363,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <Card className="border-none shadow-sm">
+      <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(7)}>
         <CardHeader>
           <CardTitle className="text-sm">
             Evolução do saldo (90 dias)
