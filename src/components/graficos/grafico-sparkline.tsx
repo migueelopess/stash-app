@@ -11,6 +11,7 @@ export function GraficoSparkline({
   return (
     <ResponsiveContainer width="100%" height={56}>
       <AreaChart
+        accessibilityLayer={false}
         data={dados}
         margin={{ top: 4, right: 0, left: 0, bottom: 0 }}
       >

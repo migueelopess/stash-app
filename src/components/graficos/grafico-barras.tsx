@@ -22,6 +22,7 @@ export function GraficoBarras({
     <div className="flex flex-col gap-2">
       <ResponsiveContainer width="100%" height={200}>
         <BarChart
+          accessibilityLayer={false}
           data={dados}
           margin={{ top: 12, right: 4, left: 4, bottom: 0 }}
           barGap={5}

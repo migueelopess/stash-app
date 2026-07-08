@@ -25,7 +25,7 @@ export function GraficoDonut({
     <div className="flex flex-col gap-4">
       <div className="relative">
         <ResponsiveContainer width="100%" height={200}>
-          <PieChart>
+          <PieChart accessibilityLayer={false}>
             <Pie
               data={dados}
               dataKey="valor"

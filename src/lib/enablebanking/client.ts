@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { criarJwtEb } from "./jwt";
 import type {
   EbAspsp,
@@ -34,6 +35,16 @@ export async function listarAspsps(): Promise<EbAspsp[]> {
   const data = await ebFetch<{ aspsps: EbAspsp[] }>("/aspsps");
   return data.aspsps;
 }
+
+/**
+ * Versão com cache (6h): a lista de bancos quase nunca muda e o pedido à
+ * Enable Banking custa segundos — sem cache tornava a página Contas lenta.
+ */
+export const listarAspspsComCache = unstable_cache(
+  listarAspsps,
+  ["eb-aspsps"],
+  { revalidate: 6 * 60 * 60 }
+);
 
 /** Inicia a autorização PSD2: devolve o URL do banco para redirecionar o utilizador. */
 export async function iniciarAutorizacao(params: {

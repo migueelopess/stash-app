@@ -7,14 +7,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { listarAspsps } from "@/lib/enablebanking/client";
+import { listarAspspsComCache } from "@/lib/enablebanking/client";
 import { ebConfigurado } from "@/lib/enablebanking/jwt";
 import type { EbAspsp } from "@/lib/enablebanking/types";
 import { diasAte, formatarData, formatarEuros } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { ligarBanco } from "./actions";
 
-const BANCOS_SUPORTADOS = /mock|caixa geral|cgd|bpi|santander/i;
+const BANCOS_SUPORTADOS =
+  /mock|caixa geral|cgd|bpi|santander|banco ctt|novo ?banco/i;
 
 const MENSAGENS_ERRO: Record<string, string> = {
   banco_invalido: "Banco inválido. Tenta novamente.",
@@ -78,7 +79,7 @@ export default async function ContasPage({
   let erroAspsps = false;
   if (configurado) {
     try {
-      const todos = await listarAspsps();
+      const todos = await listarAspspsComCache();
       bancosDisponiveis = todos.filter(
         (b) => b.country === "PT" && BANCOS_SUPORTADOS.test(b.name)
       );

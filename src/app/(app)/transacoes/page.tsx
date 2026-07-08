@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
+import { FiltrosTransacoes } from "@/components/filtros-transacoes";
 import { IconeCategoria } from "@/components/icone-categoria";
 import { Button } from "@/components/ui/button";
 import { formatarEuros, tituloTransacao } from "@/lib/format";
@@ -125,23 +126,28 @@ export default async function TransacoesPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Transações</h1>
+      <div className="flex items-center justify-between pt-1">
+        <div>
+          <h1 className="text-2xl font-bold">Transações</h1>
+          {ultimaSync && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Sincronizado {formatoDia.format(new Date(ultimaSync))} às{" "}
+              {formatoHora.format(new Date(ultimaSync))}
+            </p>
+          )}
+        </div>
         <form action={sincronizarAgora}>
-          <Button type="submit" variant="outline" size="sm">
-            <RefreshCw className="size-4" />
-            Sincronizar
+          <Button
+            type="submit"
+            variant="outline"
+            size="icon-lg"
+            className="rounded-full shadow-sm"
+            title="Sincronizar agora"
+          >
+            <RefreshCw className="size-4.5" />
           </Button>
         </form>
       </div>
-
-      {ultimaSync && (
-        <p className="text-xs text-muted-foreground">
-          Última sincronização:{" "}
-          {formatoDia.format(new Date(ultimaSync))} às{" "}
-          {formatoHora.format(new Date(ultimaSync))}
-        </p>
-      )}
 
       {filtros.sync === "ok" && (
         <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
@@ -157,44 +163,7 @@ export default async function TransacoesPage({
         </p>
       )}
 
-      <form method="GET" className="grid grid-cols-3 gap-2">
-        <select
-          name="mes"
-          defaultValue={filtros.mes ?? ""}
-          className="h-9 rounded-xl border border-border/60 bg-card px-2 text-sm shadow-sm"
-        >
-          <option value="">Todos os meses</option>
-          {opcoesDeMes().map((m) => (
-            <option key={m.valor} value={m.valor}>
-              {m.rotulo}
-            </option>
-          ))}
-        </select>
-        <select
-          name="tipo"
-          defaultValue={filtros.tipo ?? ""}
-          className="h-9 rounded-xl border border-border/60 bg-card px-2 text-sm shadow-sm"
-        >
-          <option value="">Tudo</option>
-          <option value="ganhos">Ganhos</option>
-          <option value="gastos">Gastos</option>
-        </select>
-        <select
-          name="conta"
-          defaultValue={filtros.conta ?? ""}
-          className="h-9 rounded-xl border border-border/60 bg-card px-2 text-sm shadow-sm"
-        >
-          <option value="">Todas as contas</option>
-          {(contas ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name ?? c.iban ?? "Conta"}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" variant="secondary" size="sm" className="col-span-3">
-          Filtrar
-        </Button>
-      </form>
+      <FiltrosTransacoes contas={contas ?? []} meses={opcoesDeMes()} />
 
       {visiveis.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">

@@ -127,4 +127,19 @@
   html {
     @apply font-sans;
   }
+  /* Recharts: sem outline de foco ao clicar/tocar nos gráficos */
+  .recharts-wrapper,
+  .recharts-wrapper:focus,
+  .recharts-wrapper *,
+  .recharts-wrapper *:focus {
+    outline: none !important;
+  }
+}
+
+/* Esconder scrollbar nas filas horizontais de chips */
+@utility sem-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
