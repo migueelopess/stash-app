@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { WalletMinimal } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +29,12 @@ export default async function LoginPage({
   const { erro } = await searchParams;
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
+    <main className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-emerald-600/10 via-background to-background p-4">
+      <Card className="w-full max-w-sm border-none shadow-xl shadow-emerald-950/10">
+        <CardHeader className="items-center text-center">
+          <span className="mb-2 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-lg shadow-emerald-900/30">
+            <WalletMinimal className="size-7" />
+          </span>
           <CardTitle className="text-2xl">Gestão Financeira</CardTitle>
           <CardDescription>Inicia sessão para continuar</CardDescription>
         </CardHeader>

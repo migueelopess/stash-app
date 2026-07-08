@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
+import { IconeCategoria } from "@/components/icone-categoria";
 import { Button } from "@/components/ui/button";
-import { formatarEuros } from "@/lib/format";
+import { formatarEuros, tituloTransacao } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { sincronizarAgora } from "./actions";
@@ -39,7 +40,11 @@ interface Transacao {
   amount: string;
   description: string | null;
   counterparty: string | null;
-  categories: { name: string; color: string | null } | null;
+  categories: {
+    name: string;
+    color: string | null;
+    icon: string | null;
+  } | null;
 }
 
 function opcoesDeMes(): { valor: string; rotulo: string }[] {
@@ -68,7 +73,7 @@ export default async function TransacoesPage({
   let query = supabase
     .from("transactions")
     .select(
-      "id, booking_date, amount, description, counterparty, categories (name, color)"
+      "id, booking_date, amount, description, counterparty, categories (name, color, icon)"
     )
     .order("booking_date", { ascending: false })
     .order("created_at", { ascending: false })
@@ -156,7 +161,7 @@ export default async function TransacoesPage({
         <select
           name="mes"
           defaultValue={filtros.mes ?? ""}
-          className="h-9 rounded-md border bg-transparent px-2 text-sm"
+          className="h-9 rounded-xl border border-border/60 bg-card px-2 text-sm shadow-sm"
         >
           <option value="">Todos os meses</option>
           {opcoesDeMes().map((m) => (
@@ -168,7 +173,7 @@ export default async function TransacoesPage({
         <select
           name="tipo"
           defaultValue={filtros.tipo ?? ""}
-          className="h-9 rounded-md border bg-transparent px-2 text-sm"
+          className="h-9 rounded-xl border border-border/60 bg-card px-2 text-sm shadow-sm"
         >
           <option value="">Tudo</option>
           <option value="ganhos">Ganhos</option>
@@ -177,7 +182,7 @@ export default async function TransacoesPage({
         <select
           name="conta"
           defaultValue={filtros.conta ?? ""}
-          className="h-9 rounded-md border bg-transparent px-2 text-sm"
+          className="h-9 rounded-xl border border-border/60 bg-card px-2 text-sm shadow-sm"
         >
           <option value="">Todas as contas</option>
           {(contas ?? []).map((c) => (
@@ -197,44 +202,65 @@ export default async function TransacoesPage({
         </p>
       )}
 
-      {[...grupos.entries()].map(([dia, linhas]) => (
-        <div key={dia} className="flex flex-col gap-1">
-          <p className="pt-2 text-xs font-medium uppercase text-muted-foreground">
-            {formatoDia.format(new Date(dia))}
-          </p>
-          {linhas.map((t) => {
-            const valor = Number(t.amount);
-            return (
-              <Link
-                key={t.id}
-                href={`/transacoes/${t.id}`}
-                className="flex items-center justify-between gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50"
+      {[...grupos.entries()].map(([dia, linhas]) => {
+        const totalDia = linhas.reduce((soma, t) => soma + Number(t.amount), 0);
+        return (
+          <div key={dia} className="flex flex-col gap-1.5">
+            <div className="flex items-baseline justify-between pt-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {formatoDia.format(new Date(dia))}
+              </p>
+              <p
+                className={cn(
+                  "text-xs font-medium tabular-nums text-muted-foreground",
+                  totalDia > 0 && "text-emerald-600 dark:text-emerald-400"
+                )}
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {t.counterparty ?? t.description ?? "Transação"}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {t.categories?.name ?? "Por categorizar"}
-                    {t.counterparty && t.description
-                      ? ` · ${t.description}`
-                      : ""}
-                  </p>
-                </div>
-                <p
-                  className={cn(
-                    "shrink-0 text-sm font-semibold tabular-nums",
-                    valor > 0 && "text-emerald-600 dark:text-emerald-400"
-                  )}
-                >
-                  {valor > 0 ? "+" : ""}
-                  {formatarEuros(t.amount)}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+                {totalDia > 0 ? "+" : ""}
+                {formatarEuros(totalDia)}
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+              {linhas.map((t, i) => {
+                const valor = Number(t.amount);
+                return (
+                  <Link
+                    key={t.id}
+                    href={`/transacoes/${t.id}`}
+                    className={cn(
+                      "flex items-center gap-3 p-3 transition-colors hover:bg-muted/50",
+                      i > 0 && "border-t border-border/50"
+                    )}
+                  >
+                    <IconeCategoria
+                      icone={t.categories?.icon}
+                      cor={t.categories?.color}
+                      ganho={valor > 0}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {tituloTransacao(t.counterparty, t.description)}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {t.categories?.name ?? "Por categorizar"}
+                      </p>
+                    </div>
+                    <p
+                      className={cn(
+                        "shrink-0 text-sm font-semibold tabular-nums",
+                        valor > 0 && "text-emerald-600 dark:text-emerald-400"
+                      )}
+                    >
+                      {valor > 0 ? "+" : ""}
+                      {formatarEuros(t.amount)}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
 
       {haMais && (
         <Button

@@ -1,9 +1,18 @@
 import Link from "next/link";
-import { TrendingDown, TrendingUp, TriangleAlert } from "lucide-react";
+import {
+  Banknote,
+  HandCoins,
+  PiggyBank,
+  TrendingDown,
+  TrendingUp,
+  TriangleAlert,
+} from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoDonut } from "@/components/graficos/grafico-donut";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
+import { GraficoSparkline } from "@/components/graficos/grafico-sparkline";
+import { IconeCategoria } from "@/components/icone-categoria";
 import {
   Card,
   CardContent,
@@ -11,24 +20,43 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  comparacaoComMesAnterior,
   ganhosVsGastosPorMes,
   gastosPorCategoria,
   resumoDoMes,
   serieDeSaldo,
   somaDoMesPorCategoria,
+  topGastosDoMes,
   type TransacaoDash,
 } from "@/lib/dashboard";
-import { diasAte, formatarEuros } from "@/lib/format";
+import { diasAte, formatarEuros, tituloTransacao } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 const MESES_HISTORICO = 6;
 const DIAS_SERIE_SALDO = 90;
 
+const formatoMesLongo = new Intl.DateTimeFormat("pt-PT", { month: "long" });
+
 interface LinhaTransacao {
+  id: string;
   booking_date: string;
   amount: number;
-  categories: { name: string; color: string | null } | null;
+  description: string | null;
+  counterparty: string | null;
+  categories: {
+    name: string;
+    color: string | null;
+    icon: string | null;
+  } | null;
+}
+
+function saudacao(): string {
+  const hora = new Date().getHours();
+  if (hora < 6) return "Boa noite";
+  if (hora < 13) return "Bom dia";
+  if (hora < 20) return "Boa tarde";
+  return "Boa noite";
 }
 
 export default async function DashboardPage() {
@@ -38,33 +66,42 @@ export default async function DashboardPage() {
   inicioHistorico.setMonth(inicioHistorico.getMonth() - MESES_HISTORICO);
   inicioHistorico.setDate(1);
 
-  const [{ data: contas }, { data: transacoesRaw }, { data: ligacoes }, { data: metas }] =
-    await Promise.all([
-      supabase.from("accounts").select("balance"),
-      supabase
-        .from("transactions")
-        .select("booking_date, amount, categories (name, color)")
-        .gte("booking_date", inicioHistorico.toISOString().slice(0, 10))
-        .order("booking_date"),
-      supabase
-        .from("bank_connections")
-        .select("bank_name, valid_until, status")
-        .eq("status", "active"),
-      supabase
-        .from("goals")
-        .select("id, name, target_amount")
-        .order("created_at")
-        .limit(1),
-    ]);
+  const [
+    { data: contas },
+    { data: transacoesRaw },
+    { data: ligacoes },
+    { data: metas },
+  ] = await Promise.all([
+    supabase.from("accounts").select("balance"),
+    supabase
+      .from("transactions")
+      .select(
+        "id, booking_date, amount, description, counterparty, categories (name, color, icon)"
+      )
+      .gte("booking_date", inicioHistorico.toISOString().slice(0, 10))
+      .order("booking_date"),
+    supabase
+      .from("bank_connections")
+      .select("bank_name, valid_until, status")
+      .eq("status", "active"),
+    supabase
+      .from("goals")
+      .select("id, name, target_amount")
+      .order("created_at")
+      .limit(1),
+  ]);
 
   if (!contas || contas.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
             Ainda não tens bancos ligados.{" "}
-            <Link href="/contas" className="font-medium text-foreground underline">
+            <Link
+              href="/contas"
+              className="font-medium text-primary underline"
+            >
               Liga o primeiro
             </Link>{" "}
             para veres aqui o resumo das tuas finanças.
@@ -77,19 +114,29 @@ export default async function DashboardPage() {
   const transacoes: TransacaoDash[] = (
     (transacoesRaw ?? []) as unknown as LinhaTransacao[]
   ).map((t) => ({
+    id: t.id,
     booking_date: t.booking_date,
     amount: Number(t.amount),
     categoria: t.categories?.name ?? null,
     cor: t.categories?.color ?? null,
+    icone: t.categories?.icon ?? null,
+    descricao: t.description,
+    contraparte: t.counterparty,
   }));
 
-  const saldoTotal = contas.reduce((soma, c) => soma + Number(c.balance ?? 0), 0);
+  const saldoTotal = contas.reduce(
+    (soma, c) => soma + Number(c.balance ?? 0),
+    0
+  );
   const resumo = resumoDoMes(transacoes);
   const barras = ganhosVsGastosPorMes(transacoes, MESES_HISTORICO);
   const donut = gastosPorCategoria(transacoes);
   const linha = serieDeSaldo(saldoTotal, transacoes, DIAS_SERIE_SALDO);
+  const sparkline = serieDeSaldo(saldoTotal, transacoes, 30);
   const salarioMes = somaDoMesPorCategoria(transacoes, "Salário");
   const tarefasMes = somaDoMesPorCategoria(transacoes, "Tarefas");
+  const topGastos = topGastosDoMes(transacoes, 5);
+  const comparacao = comparacaoComMesAnterior(transacoes);
 
   const aRenovar = (ligacoes ?? []).filter(
     (ligacao) => diasAte(ligacao.valid_until) <= 14
@@ -99,14 +146,26 @@ export default async function DashboardPage() {
     ? (saldoTotal / Number(meta.target_amount)) * 100
     : 0;
 
+  const mesAnteriorNome = formatoMesLongo.format(
+    new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1)
+  );
+
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <div className="flex items-center justify-between pt-1">
+        <div>
+          <p className="text-sm text-muted-foreground">{saudacao()} 👋</p>
+          <h1 className="text-xl font-bold">As tuas finanças</h1>
+        </div>
+        <span className="flex size-10 items-center justify-center rounded-full bg-primary/12 text-sm font-bold text-primary">
+          ML
+        </span>
+      </div>
 
       {aRenovar.length > 0 && (
         <Link
           href="/contas"
-          className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+          className="flex items-start gap-2 rounded-xl border border-amber-500/50 bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-950 dark:text-amber-300"
         >
           <TriangleAlert className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -118,63 +177,109 @@ export default async function DashboardPage() {
         </Link>
       )}
 
-      <Card>
-        <CardContent className="flex flex-col gap-1 pt-2">
-          <p className="text-sm text-muted-foreground">Saldo total</p>
-          <p className="text-3xl font-semibold tabular-nums">
-            {formatarEuros(saldoTotal)}
-          </p>
-          <p
-            className={cn(
-              "flex items-center gap-1 text-sm",
-              resumo.variacao >= 0
-                ? "text-emerald-600 dark:text-emerald-400"
-                : "text-rose-600 dark:text-rose-400"
-            )}
-          >
-            {resumo.variacao >= 0 ? (
-              <TrendingUp className="size-4" />
-            ) : (
-              <TrendingDown className="size-4" />
-            )}
-            {resumo.variacao >= 0 ? "+" : ""}
-            {formatarEuros(resumo.variacao)} este mês
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-3 gap-2">
-        <Card>
-          <CardContent className="flex flex-col gap-1 pt-2">
-            <p className="text-xs text-muted-foreground">Salário</p>
-            <p className="text-sm font-semibold tabular-nums">
-              {formatarEuros(salarioMes)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex flex-col gap-1 pt-2">
-            <p className="text-xs text-muted-foreground">Tarefas</p>
-            <p className="text-sm font-semibold tabular-nums">
-              {formatarEuros(tarefasMes)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex flex-col gap-1 pt-2">
-            <p className="text-xs text-muted-foreground">Poupança</p>
-            <p className="text-sm font-semibold tabular-nums">
-              {resumo.taxaPoupanca === null ? "—" : `${resumo.taxaPoupanca}%`}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Hero: saldo total com gradiente e sparkline */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-5 text-white shadow-lg shadow-emerald-900/20">
+        <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-white/10 blur-2xl" />
+        <p className="text-sm font-medium text-emerald-100">Saldo total</p>
+        <p className="mt-1 text-4xl font-bold tabular-nums tracking-tight">
+          {formatarEuros(saldoTotal)}
+        </p>
+        <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium backdrop-blur">
+          {resumo.variacao >= 0 ? (
+            <TrendingUp className="size-3.5" />
+          ) : (
+            <TrendingDown className="size-3.5" />
+          )}
+          {resumo.variacao >= 0 ? "+" : ""}
+          {formatarEuros(resumo.variacao)} este mês
+        </p>
+        <div className="-mx-2 mt-3">
+          <GraficoSparkline dados={sparkline} />
+        </div>
       </div>
 
+      {/* Cartões de resumo */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          {
+            rotulo: "Salário",
+            valor: formatarEuros(salarioMes),
+            icon: Banknote,
+            cor: "#16a34a",
+          },
+          {
+            rotulo: "Tarefas",
+            valor: formatarEuros(tarefasMes),
+            icon: HandCoins,
+            cor: "#f59e0b",
+          },
+          {
+            rotulo: "Poupança",
+            valor:
+              resumo.taxaPoupanca === null ? "—" : `${resumo.taxaPoupanca}%`,
+            icon: PiggyBank,
+            cor: "#8b5cf6",
+          },
+        ].map(({ rotulo, valor, icon: Icon, cor }) => (
+          <Card key={rotulo} className="border-none shadow-sm">
+            <CardContent className="flex flex-col gap-2 pt-1">
+              <span
+                className="flex size-8 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${cor}1f`, color: cor }}
+              >
+                <Icon className="size-4" />
+              </span>
+              <div>
+                <p className="text-[11px] text-muted-foreground">{rotulo}</p>
+                <p className="text-sm font-bold tabular-nums">{valor}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Insight: comparação com o mês anterior */}
+      {comparacao && (
+        <Card className="border-none shadow-sm">
+          <CardContent className="flex items-center gap-3 pt-1">
+            <span
+              className={cn(
+                "flex size-10 shrink-0 items-center justify-center rounded-full",
+                comparacao.diferenca <= 0
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+              )}
+            >
+              {comparacao.diferenca <= 0 ? (
+                <TrendingDown className="size-5" />
+              ) : (
+                <TrendingUp className="size-5" />
+              )}
+            </span>
+            <p className="text-sm">
+              {comparacao.diferenca <= 0 ? (
+                <>
+                  Gastaste{" "}
+                  <strong>{formatarEuros(-comparacao.diferenca)} a menos</strong>{" "}
+                  do que em {mesAnteriorNome}, à mesma altura do mês. 👏
+                </>
+              ) : (
+                <>
+                  Gastaste{" "}
+                  <strong>{formatarEuros(comparacao.diferenca)} a mais</strong>{" "}
+                  do que em {mesAnteriorNome}, à mesma altura do mês.
+                </>
+              )}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {meta && (
-        <Card>
-          <CardContent className="flex flex-col gap-2 pt-2">
+        <Card className="border-none shadow-sm">
+          <CardContent className="flex flex-col gap-2 pt-1">
             <div className="flex items-center justify-between gap-2 text-sm">
-              <p className="font-medium">Meta: {meta.name}</p>
+              <p className="font-semibold">🎯 {meta.name}</p>
               <p className="text-muted-foreground">
                 {Math.min(100, Math.round(percentagemMeta))}%
               </p>
@@ -188,7 +293,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardHeader>
           <CardTitle className="text-sm">Ganhos vs. gastos</CardTitle>
         </CardHeader>
@@ -197,7 +302,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardHeader>
           <CardTitle className="text-sm">Gastos do mês por categoria</CardTitle>
         </CardHeader>
@@ -212,9 +317,44 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      {topGastos.length > 0 && (
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-sm">Maiores gastos do mês</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {topGastos.map((t) => (
+              <Link
+                key={t.id}
+                href={`/transacoes/${t.id}`}
+                className="flex items-center gap-3"
+              >
+                <IconeCategoria icone={t.icone} cor={t.cor} ganho={false} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {tituloTransacao(
+                      t.contraparte ?? null,
+                      t.descricao ?? null
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {t.categoria ?? "Por categorizar"}
+                  </p>
+                </div>
+                <p className="shrink-0 text-sm font-semibold tabular-nums">
+                  {formatarEuros(t.amount)}
+                </p>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-none shadow-sm">
         <CardHeader>
-          <CardTitle className="text-sm">Evolução do saldo (90 dias)</CardTitle>
+          <CardTitle className="text-sm">
+            Evolução do saldo (90 dias)
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <GraficoLinha dados={linha} />

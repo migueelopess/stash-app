@@ -108,10 +108,12 @@ export default async function ContasPage({
       )}
 
       {(ligacoes ?? []).map((ligacao) => (
-        <Card key={ligacao.id}>
+        <Card key={ligacao.id} className="border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Landmark className="size-4" />
+            <CardTitle className="flex items-center gap-2.5 text-base">
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary/12 text-primary">
+                <Landmark className="size-4.5" />
+              </span>
               {ligacao.bank_name}
             </CardTitle>
             <BadgeEstado ligacao={ligacao} />
@@ -120,7 +122,7 @@ export default async function ContasPage({
             {ligacao.accounts.map((conta) => (
               <div
                 key={conta.id}
-                className="flex items-center justify-between gap-2"
+                className="flex items-center justify-between gap-2 rounded-xl bg-muted/50 p-3"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
@@ -132,7 +134,7 @@ export default async function ContasPage({
                     </p>
                   )}
                 </div>
-                <p className="shrink-0 text-sm font-semibold tabular-nums">
+                <p className="shrink-0 text-base font-bold tabular-nums">
                   {formatarEuros(conta.balance)}
                 </p>
               </div>

@@ -1,10 +1,14 @@
 // Agregações puras para o dashboard (sem dependências de servidor)
 
 export interface TransacaoDash {
+  id?: string;
   booking_date: string;
   amount: number;
   categoria: string | null;
   cor: string | null;
+  icone?: string | null;
+  descricao?: string | null;
+  contraparte?: string | null;
 }
 
 const formatoMesCurto = new Intl.DateTimeFormat("pt-PT", { month: "short" });
@@ -116,6 +120,48 @@ export function somaDoMesPorCategoria(
         t.booking_date.slice(0, 7) === mesAtual && t.categoria === categoria
     )
     .reduce((soma, t) => soma + t.amount, 0);
+}
+
+/** Maiores gastos do mês atual (mais caros primeiro). */
+export function topGastosDoMes(
+  transacoes: TransacaoDash[],
+  n: number
+): TransacaoDash[] {
+  const mesAtual = chaveMes(new Date());
+  return transacoes
+    .filter(
+      (t) => t.amount < 0 && t.booking_date.slice(0, 7) === mesAtual
+    )
+    .sort((a, b) => a.amount - b.amount)
+    .slice(0, n);
+}
+
+/** Comparação de gastos: mês atual vs. mês anterior (até ao mesmo dia). */
+export function comparacaoComMesAnterior(transacoes: TransacaoDash[]): {
+  atual: number;
+  anterior: number;
+  diferenca: number;
+} | null {
+  const hoje = new Date();
+  const diaLimite = hoje.getDate();
+  const mesAtual = chaveMes(hoje);
+  const dataAnterior = new Date(hoje);
+  dataAnterior.setDate(1);
+  dataAnterior.setMonth(dataAnterior.getMonth() - 1);
+  const mesAnterior = chaveMes(dataAnterior);
+
+  let atual = 0;
+  let anterior = 0;
+  for (const t of transacoes) {
+    if (t.amount >= 0) continue;
+    const mes = t.booking_date.slice(0, 7);
+    const dia = Number(t.booking_date.slice(8, 10));
+    if (mes === mesAtual) atual += -t.amount;
+    else if (mes === mesAnterior && dia <= diaLimite) anterior += -t.amount;
+  }
+
+  if (atual === 0 && anterior === 0) return null;
+  return { atual, anterior, diferenca: atual - anterior };
 }
 
 /** Ganhos, gastos e taxa de poupança do mês atual. */

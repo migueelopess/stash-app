@@ -7,6 +7,12 @@ const euros = new Intl.NumberFormat("pt-PT", {
   currency: "EUR",
 });
 
+const eurosInteiros = new Intl.NumberFormat("pt-PT", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
 export function GraficoDonut({
   dados,
 }: {
@@ -16,32 +22,41 @@ export function GraficoDonut({
 
   return (
     <div className="flex flex-col gap-3">
-      <ResponsiveContainer width="100%" height={200}>
-        <PieChart>
-          <Pie
-            data={dados}
-            dataKey="valor"
-            nameKey="name"
-            innerRadius={55}
-            outerRadius={85}
-            paddingAngle={2}
-            strokeWidth={0}
-          >
-            {dados.map((d) => (
-              <Cell key={d.name} fill={d.cor} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(valor) => euros.format(Number(valor))}
-            contentStyle={{
-              background: "var(--popover)",
-              border: "1px solid var(--border)",
-              borderRadius: 8,
-              fontSize: 12,
-            }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+      <div className="relative">
+        <ResponsiveContainer width="100%" height={210}>
+          <PieChart>
+            <Pie
+              data={dados}
+              dataKey="valor"
+              nameKey="name"
+              innerRadius={62}
+              outerRadius={90}
+              paddingAngle={3}
+              cornerRadius={6}
+              strokeWidth={0}
+            >
+              {dados.map((d) => (
+                <Cell key={d.name} fill={d.cor} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(valor) => euros.format(Number(valor))}
+              contentStyle={{
+                background: "var(--popover)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                fontSize: 12,
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="text-lg font-bold tabular-nums">
+            {eurosInteiros.format(total)}
+          </p>
+        </div>
+      </div>
       <ul className="flex flex-col gap-1.5">
         {dados.map((d) => (
           <li

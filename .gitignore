@@ -47,3 +47,6 @@ public/swe-worker*
 
 # chaves privadas
 *.pem
+
+.vercel
+.env*
