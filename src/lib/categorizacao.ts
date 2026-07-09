@@ -84,6 +84,9 @@ const PALAVRAS_IGNORADAS = new Set([
   "no", "na", "nos", "nas", "the", "c", "deb", "com", "por",
   "compra", "compras", "pag", "pagamento", "trf", "transf",
   "transferencia", "mbway", "mb", "way", "dd", "deb", "cred", "cdeb",
+  // códigos técnicos da CGD (transferências, wallets, levantamentos)
+  "tfi", "car", "wal", "crt", "db", "cr", "vcher", "bx", "valor",
+  "https", "www",
 ]);
 
 /**

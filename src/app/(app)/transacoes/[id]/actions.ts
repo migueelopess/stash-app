@@ -91,7 +91,9 @@ export async function categorizarTransacao(formData: FormData) {
         const { data: candidatas } = await supabase
           .from("transactions")
           .select("id, description, counterparty, amount, category_id")
-          .or("categorized_by.eq.none,categorized_by.eq.rule")
+          .or(
+            "categorized_by.eq.none,categorized_by.eq.rule,categorized_by.eq.dict"
+          )
           .neq("id", transacaoId);
 
         const alvo = (candidatas ?? []).filter(

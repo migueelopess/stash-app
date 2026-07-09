@@ -9,7 +9,11 @@ import {
   Gamepad2,
   GraduationCap,
   HandCoins,
+  HeartPulse,
+  House,
   Repeat,
+  Scissors,
+  ShoppingBag,
   ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +31,10 @@ const ICONES: Record<string, LucideIcon> = {
   "graduation-cap": GraduationCap,
   "arrow-left-right": ArrowLeftRight,
   "circle-ellipsis": CircleEllipsis,
+  "shopping-bag": ShoppingBag,
+  "heart-pulse": HeartPulse,
+  house: House,
+  scissors: Scissors,
 };
 
 export function IconeCategoria({

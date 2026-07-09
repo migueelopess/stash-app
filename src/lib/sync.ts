@@ -5,6 +5,7 @@ import {
   aplicarRegras,
   type RegraCategorizacao,
 } from "@/lib/categorizacao";
+import { categoriaDoDicionario } from "@/lib/dicionario-comerciantes";
 import { obterSaldos, obterTransacoes } from "@/lib/enablebanking/client";
 import type { EbTransaction } from "@/lib/enablebanking/types";
 
@@ -51,7 +52,8 @@ function idTransacao(uid: string, t: EbTransaction): string {
 function mapearTransacao(
   conta: ContaParaSync,
   t: EbTransaction,
-  regras: RegraCategorizacao[]
+  regras: RegraCategorizacao[],
+  categoriasPorNome: Map<string, string>
 ) {
   const valor = Number(t.transaction_amount.amount);
   const sinal = t.credit_debit_indicator === "DBIT" ? -1 : 1;
@@ -69,18 +71,26 @@ function mapearTransacao(
     raw: t,
   };
 
-  const categoria = aplicarRegras(regras, linha);
-  return {
-    ...linha,
-    category_id: categoria,
-    categorized_by: categoria ? "rule" : "none",
-  };
+  // Cascata: 1) aprendizagens do utilizador  2) dicionário PT  3) nada
+  const porRegra = aplicarRegras(regras, linha);
+  if (porRegra) {
+    return { ...linha, category_id: porRegra, categorized_by: "rule" };
+  }
+  const nomeDicionario = categoriaDoDicionario(linha.description);
+  const porDicionario = nomeDicionario
+    ? categoriasPorNome.get(nomeDicionario)
+    : undefined;
+  if (porDicionario) {
+    return { ...linha, category_id: porDicionario, categorized_by: "dict" };
+  }
+  return { ...linha, category_id: null, categorized_by: "none" };
 }
 
 async function sincronizarConta(
   supabase: SupabaseClient,
   conta: ContaParaSync,
-  regras: RegraCategorizacao[]
+  regras: RegraCategorizacao[],
+  categoriasPorNome: Map<string, string>
 ): Promise<number> {
   // Desde a última transação conhecida (com sobreposição), senão 90 dias
   const { data: ultima } = await supabase
@@ -110,7 +120,7 @@ async function sincronizarConta(
 
     const linhas = pagina.transactions
       .filter((t) => (t.status ?? "BOOK") === "BOOK")
-      .map((t) => mapearTransacao(conta, t, regras));
+      .map((t) => mapearTransacao(conta, t, regras, categoriasPorNome));
 
     if (linhas.length > 0) {
       const { count, error } = await supabase
@@ -157,11 +167,18 @@ export async function sincronizarLigacao(
     return { novas: 0, contasComErro: 0 };
   }
 
-  // Regras do dono da ligação, para categorizar as transações novas
-  const { data: regras } = await supabase
-    .from("categorization_rules")
-    .select("id, priority, match_field, match_type, match_value, category_id")
-    .eq("user_id", ligacao.user_id);
+  // Regras do dono da ligação + mapa de categorias para o dicionário
+  const [{ data: regras }, { data: categorias }] = await Promise.all([
+    supabase
+      .from("categorization_rules")
+      .select("id, priority, match_field, match_type, match_value, category_id")
+      .eq("user_id", ligacao.user_id),
+    supabase.from("categories").select("id, name"),
+  ]);
+
+  const categoriasPorNome = new Map(
+    (categorias ?? []).map((c) => [c.name as string, c.id as string])
+  );
 
   let novas = 0;
   let contasComErro = 0;
@@ -171,7 +188,8 @@ export async function sincronizarLigacao(
       novas += await sincronizarConta(
         supabase,
         conta,
-        (regras ?? []) as RegraCategorizacao[]
+        (regras ?? []) as RegraCategorizacao[],
+        categoriasPorNome
       );
     } catch (e) {
       contasComErro++;
