@@ -117,12 +117,15 @@ export const DICIONARIO: EntradaDicionario[] = [
     ],
   },
   {
-    categoria: "Transferências próprias",
+    categoria: "Investimentos",
     termos: [
       "REVOLUT", "TRADING212", "TRADING", "XTB", "DEGIRO", "ETORO",
       "COINBASE", "BINANCE", "KRAKEN", "CAR WAL", "CR VCHER",
     ],
   },
+  // MB Way sem marca associada (números de pessoas) — avaliado depois
+  // dos comerciantes, para "COMPRA MBWAY - CINEMA" cair em Lazer
+  { categoria: "Transferências", termos: ["MBWAY"] },
   { categoria: "Salário", termos: ["SALARIO", "ORDENADO", "VENCIMENTO"] },
   {
     categoria: "Outros",

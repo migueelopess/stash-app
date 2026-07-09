@@ -15,6 +15,7 @@ import {
   Scissors,
   ShoppingBag,
   ShoppingCart,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ const ICONES: Record<string, LucideIcon> = {
   "heart-pulse": HeartPulse,
   house: House,
   scissors: Scissors,
+  "trending-up": TrendingUp,
 };
 
 export function IconeCategoria({

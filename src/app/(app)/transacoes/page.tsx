@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import { ChevronRight, RefreshCw, Sparkles } from "lucide-react";
 import { FiltrosTransacoes } from "@/components/filtros-transacoes";
 import { IconeCategoria } from "@/components/icone-categoria";
 import { Button } from "@/components/ui/button";
@@ -92,16 +92,24 @@ export default async function TransacoesPage({
   if (filtros.tipo === "gastos") query = query.lt("amount", 0);
   if (filtros.conta) query = query.eq("account_id", filtros.conta);
 
-  const [{ data: transacoesRaw }, { data: contas }, { data: ligacoes }] =
-    await Promise.all([
-      query,
-      supabase.from("accounts").select("id, name, iban").order("name"),
-      supabase
-        .from("bank_connections")
-        .select("last_synced_at")
-        .order("last_synced_at", { ascending: false })
-        .limit(1),
-    ]);
+  const [
+    { data: transacoesRaw },
+    { data: contas },
+    { data: ligacoes },
+    { count: nPendentes },
+  ] = await Promise.all([
+    query,
+    supabase.from("accounts").select("id, name, iban").order("name"),
+    supabase
+      .from("bank_connections")
+      .select("last_synced_at")
+      .order("last_synced_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .is("category_id", null),
+  ]);
 
   const transacoes = (transacoesRaw ?? []) as unknown as Transacao[];
   const haMais = transacoes.length > limite;
@@ -161,6 +169,26 @@ export default async function TransacoesPage({
         <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           A sincronização falhou nalgumas contas. Tenta novamente.
         </p>
+      )}
+
+      {(nPendentes ?? 0) > 0 && (
+        <Link
+          href="/transacoes/pendentes"
+          className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/8 p-3 shadow-sm transition-all hover:bg-primary/12 active:scale-[0.99]"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Sparkles className="size-4.5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">
+              {nPendentes} por categorizar
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              Trata delas todas de uma vez — a app aprende contigo
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
       )}
 
       <FiltrosTransacoes contas={contas ?? []} meses={opcoesDeMes()} />
