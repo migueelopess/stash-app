@@ -55,21 +55,23 @@ export function ganhosVsGastosPorMes(
   }));
 }
 
-/** Gastos do mês atual agrupados por categoria (maiores primeiro). */
-export function gastosPorCategoria(
-  transacoes: TransacaoDash[]
+function somasPorCategoria(
+  transacoes: TransacaoDash[],
+  sinal: 1 | -1
 ): { name: string; valor: number; cor: string }[] {
   const mesAtual = chaveMes(new Date());
   const grupos = new Map<string, { valor: number; cor: string }>();
 
   for (const t of transacoes) {
-    if (t.amount >= 0 || t.booking_date.slice(0, 7) !== mesAtual) continue;
+    if (t.amount * sinal <= 0 || t.booking_date.slice(0, 7) !== mesAtual) {
+      continue;
+    }
     const nome = t.categoria ?? "Por categorizar";
     const grupo = grupos.get(nome) ?? {
       valor: 0,
       cor: t.cor ?? "#94a3b8",
     };
-    grupo.valor += -t.amount;
+    grupo.valor += Math.abs(t.amount);
     grupos.set(nome, grupo);
   }
 
@@ -80,6 +82,16 @@ export function gastosPorCategoria(
       cor,
     }))
     .sort((a, b) => b.valor - a.valor);
+}
+
+/** Gastos do mês atual agrupados por categoria (maiores primeiro). */
+export function gastosPorCategoria(transacoes: TransacaoDash[]) {
+  return somasPorCategoria(transacoes, -1);
+}
+
+/** Ganhos do mês atual agrupados por categoria (maiores primeiro). */
+export function ganhosPorCategoria(transacoes: TransacaoDash[]) {
+  return somasPorCategoria(transacoes, 1);
 }
 
 /** Evolução do saldo: recua a partir do saldo atual desfazendo as transações. */

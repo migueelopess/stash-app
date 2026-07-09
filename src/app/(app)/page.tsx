@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
 import { ContadorEuros } from "@/components/contador-euros";
+import { DonutComToggle } from "@/components/graficos/donut-com-toggle";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
-import { GraficoDonut } from "@/components/graficos/grafico-donut";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
 import { GraficoSparkline } from "@/components/graficos/grafico-sparkline";
 import { IconeCategoria } from "@/components/icone-categoria";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import {
   comparacaoComMesAnterior,
+  ganhosPorCategoria,
   ganhosVsGastosPorMes,
   gastosPorCategoria,
   resumoDoMes,
@@ -136,7 +137,8 @@ export default async function DashboardPage() {
   );
   const resumo = resumoDoMes(transacoes);
   const barras = ganhosVsGastosPorMes(transacoes, MESES_HISTORICO);
-  const donut = gastosPorCategoria(transacoes);
+  const donutGastos = gastosPorCategoria(transacoes);
+  const donutGanhos = ganhosPorCategoria(transacoes);
   const linha = serieDeSaldo(saldoTotal, transacoes, DIAS_SERIE_SALDO);
   const sparkline = serieDeSaldo(saldoTotal, transacoes, 30);
   const salarioMes = somaDoMesPorCategoria(transacoes, "Salário");
@@ -317,16 +319,10 @@ export default async function DashboardPage() {
 
       <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(5)}>
         <CardHeader>
-          <CardTitle className="text-sm">Gastos do mês por categoria</CardTitle>
+          <CardTitle className="text-sm">Este mês por categoria</CardTitle>
         </CardHeader>
         <CardContent>
-          {donut.length > 0 ? (
-            <GraficoDonut dados={donut} />
-          ) : (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Sem gastos este mês. 🎉
-            </p>
-          )}
+          <DonutComToggle gastos={donutGastos} ganhos={donutGanhos} />
         </CardContent>
       </Card>
 
