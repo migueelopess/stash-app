@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,8 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { extrairPalavraChave } from "@/lib/categorizacao";
 import { formatarData, formatarEuros } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -58,7 +58,10 @@ export default async function TransacaoPage({
     .eq("kind", valor > 0 ? "income" : "expense")
     .order("name");
 
-  const valorSugerido = transacao.counterparty ?? transacao.description ?? "";
+  const palavraChave =
+    extrairPalavraChave(transacao.description) ??
+    transacao.counterparty ??
+    null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -117,7 +120,7 @@ export default async function TransacaoPage({
             id="category_id"
             name="category_id"
             defaultValue={transacao.category_id ?? ""}
-            className="h-9 rounded-md border bg-transparent px-2 text-sm"
+            className="h-10 rounded-xl border border-border/60 bg-card px-3 text-sm shadow-sm"
           >
             <option value="">Por categorizar</option>
             {(categorias ?? []).map((c) => (
@@ -128,43 +131,16 @@ export default async function TransacaoPage({
           </select>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">
-              Regra automática (opcional)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="criar_regra" className="size-4" />
-              Categorizar sempre assim transações parecidas
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                name="match_field"
-                defaultValue={transacao.counterparty ? "counterparty" : "description"}
-                className="h-9 rounded-md border bg-transparent px-2 text-sm"
-              >
-                <option value="counterparty">Se a entidade contiver</option>
-                <option value="description">Se a descrição contiver</option>
-              </select>
-              <Input
-                name="match_value"
-                defaultValue={valorSugerido}
-                placeholder="texto a procurar"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="aplicar_pendentes"
-                defaultChecked
-                className="size-4"
-              />
-              Aplicar já às transações por categorizar
-            </label>
-          </CardContent>
-        </Card>
+        {palavraChave && (
+          <p className="flex items-start gap-2 rounded-xl bg-accent p-3 text-xs text-accent-foreground">
+            <Sparkles className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              A app aprende contigo: futuras transações com{" "}
+              <strong>“{palavraChave}”</strong> ficam automaticamente na
+              categoria que escolheres.
+            </span>
+          </p>
+        )}
 
         <Button type="submit">Guardar</Button>
       </form>

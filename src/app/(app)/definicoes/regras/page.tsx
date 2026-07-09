@@ -13,9 +13,14 @@ const CAMPOS: Record<string, string> = {
 const TIPOS: Record<string, string> = {
   contains: "contém",
   equals: "é igual a",
-  regex: "corresponde a",
+  regex: "contém a palavra",
   between: "está entre",
 };
+
+// As regras aprendidas guardam regex com \b — mostrar só a palavra
+function valorLegivel(match_value: string): string {
+  return match_value.replace(/\\b/g, "").replace(/\\(.)/g, "$1");
+}
 
 interface Regra {
   id: string;
@@ -77,7 +82,7 @@ export default async function RegrasPage({
             <p>
               Se a <strong>{CAMPOS[r.match_field] ?? r.match_field}</strong>{" "}
               {TIPOS[r.match_type] ?? r.match_type}{" "}
-              <strong>“{r.match_value}”</strong>
+              <strong>“{valorLegivel(r.match_value)}”</strong>
             </p>
             <p className="text-xs text-muted-foreground">
               → {r.categories?.name ?? "categoria removida"}
