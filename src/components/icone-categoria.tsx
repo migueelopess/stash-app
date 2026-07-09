@@ -37,6 +37,7 @@ const ICONES: Record<string, LucideIcon> = {
   house: House,
   scissors: Scissors,
   "trending-up": TrendingUp,
+  "arrow-down-left": ArrowDownLeft,
 };
 
 export function IconeCategoria({

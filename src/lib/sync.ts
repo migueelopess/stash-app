@@ -76,7 +76,10 @@ function mapearTransacao(
   if (porRegra) {
     return { ...linha, category_id: porRegra, categorized_by: "rule" };
   }
-  const nomeDicionario = categoriaDoDicionario(linha.description);
+  const nomeDicionario = categoriaDoDicionario(
+    linha.description,
+    Number(linha.amount)
+  );
   const porDicionario = nomeDicionario
     ? categoriasPorNome.get(nomeDicionario)
     : undefined;

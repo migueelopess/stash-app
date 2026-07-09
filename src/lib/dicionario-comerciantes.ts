@@ -149,11 +149,25 @@ const PORTAGEM = /^A\d{1,2}$/; // A8, A16, A21... autoestradas
 
 /**
  * Categoria sugerida pelo dicionário para uma descrição bancária,
- * ou null se nenhum termo corresponder.
+ * ou null se nenhum termo corresponder. O valor (com sinal) desambigua
+ * transferências: a entrar → "Transferências recebidas" (ganho).
  */
 export function categoriaDoDicionario(
-  descricao: string | null
+  descricao: string | null,
+  valor?: number
 ): string | null {
+  const resultado = procurarNoDicionario(descricao);
+  if (
+    resultado === "Transferências" &&
+    valor !== undefined &&
+    valor > 0
+  ) {
+    return "Transferências recebidas";
+  }
+  return resultado;
+}
+
+function procurarNoDicionario(descricao: string | null): string | null {
   if (!descricao?.trim()) return null;
   const norm = normalizar(descricao);
   const frase = ` ${norm} `;
