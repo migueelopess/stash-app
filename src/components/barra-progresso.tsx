@@ -2,9 +2,11 @@ import { cn } from "@/lib/utils";
 
 export function BarraProgresso({
   percentagem,
+  cor,
   className,
 }: {
   percentagem: number; // 0-100
+  cor?: string; // cor da barra (por omissão esmeralda)
   className?: string;
 }) {
   const limitada = Math.max(0, Math.min(100, percentagem));
@@ -17,8 +19,8 @@ export function BarraProgresso({
       aria-valuemax={100}
     >
       <div
-        className="h-full rounded-full bg-emerald-500 transition-all"
-        style={{ width: `${limitada}%` }}
+        className={cn("h-full rounded-full transition-all", !cor && "bg-emerald-500")}
+        style={{ width: `${limitada}%`, backgroundColor: cor }}
       />
     </div>
   );

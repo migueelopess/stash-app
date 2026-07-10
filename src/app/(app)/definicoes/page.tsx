@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, ListChecks, PiggyBank, Tags } from "lucide-react";
+import { AtivarNotificacoes } from "@/components/ativar-notificacoes";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
@@ -37,6 +38,8 @@ export default async function DefinicoesPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Definições</h1>
+
+      <AtivarNotificacoes />
 
       <div className="flex flex-col gap-2">
         {seccoes.map(({ href, titulo, descricao, icon: Icon, cor }) => (

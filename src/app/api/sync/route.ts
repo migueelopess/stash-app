@@ -1,4 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  verificarAlertasDeOrcamentos,
+  verificarAlertasDeRenovacao,
+} from "@/lib/alertas";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -41,10 +45,28 @@ export async function GET(request: NextRequest) {
 
   let novas = 0;
   let contasComErro = 0;
-  for (const ligacao of (ligacoes ?? []) as unknown as LigacaoParaSync[]) {
+  const lista = (ligacoes ?? []) as unknown as (LigacaoParaSync & {
+    valid_until: string;
+  })[];
+  for (const ligacao of lista) {
     const resultado = await sincronizarLigacao(supabase, ligacao);
     novas += resultado.novas;
     contasComErro += resultado.contasComErro;
+  }
+
+  // Alertas (orçamentos + renovação PSD2) por utilizador, após o sync
+  const porUtilizador = new Map<string, typeof lista>();
+  for (const ligacao of lista) {
+    const doUtilizador = porUtilizador.get(ligacao.user_id) ?? [];
+    doUtilizador.push(ligacao);
+    porUtilizador.set(ligacao.user_id, doUtilizador);
+  }
+  for (const [userId, doUtilizador] of porUtilizador) {
+    await verificarAlertasDeOrcamentos(supabase, userId);
+    if (eCron) {
+      // só no cron diário, para os marcos 7/3/1 dias dispararem uma vez
+      await verificarAlertasDeRenovacao(supabase, userId, doUtilizador);
+    }
   }
 
   return NextResponse.json({ novas, contasComErro });

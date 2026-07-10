@@ -36,6 +36,12 @@ import {
 } from "@/lib/dashboard";
 import { diasAte, formatarEuros } from "@/lib/format";
 import { resolverNome } from "@/lib/nomes-comerciantes";
+import {
+  CORES_NIVEL,
+  estadoDoOrcamento,
+  nomeDoOrcamento,
+  type OrcamentoComCategoria,
+} from "@/lib/orcamentos";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +69,7 @@ interface LinhaTransacao {
   amount: number;
   description: string | null;
   counterparty: string | null;
+  category_id: string | null;
   categories: {
     name: string;
     color: string | null;
@@ -91,12 +98,13 @@ export default async function DashboardPage() {
     { data: ligacoes },
     { data: metas },
     { data: nomesRaw },
+    { data: orcamentosRaw },
   ] = await Promise.all([
     supabase.from("accounts").select("balance"),
     supabase
       .from("transactions")
       .select(
-        "id, booking_date, amount, description, counterparty, categories (name, color, icon)"
+        "id, booking_date, amount, description, counterparty, category_id, categories (name, color, icon)"
       )
       .gte("booking_date", inicioHistorico.toISOString().slice(0, 10))
       .order("booking_date"),
@@ -110,6 +118,9 @@ export default async function DashboardPage() {
       .order("created_at")
       .limit(1),
     supabase.from("merchant_names").select("match_value, display_name"),
+    supabase
+      .from("budgets")
+      .select("id, category_id, amount, period, categories (name, color, icon)"),
   ]);
 
   if (!contas || contas.length === 0) {
@@ -167,6 +178,22 @@ export default async function DashboardPage() {
   const tarefasMes = somaDoMesPorCategoria(transacoes, "Tarefas");
   const topGastos = topGastosDoMes(transacoes, 5);
   const comparacao = comparacaoComMesAnterior(transacoes);
+
+  // Orçamentos mais apertados (para o cartão-resumo)
+  const linhas = (transacoesRaw ?? []) as unknown as LinhaTransacao[];
+  const transacoesOrcamento = linhas
+    .filter((t) => Number(t.amount) < 0)
+    .map((t) => ({
+      booking_date: t.booking_date,
+      amount: Number(t.amount),
+      category_id: t.category_id,
+    }));
+  const estadosOrcamentos = (
+    (orcamentosRaw ?? []) as unknown as OrcamentoComCategoria[]
+  )
+    .map((o) => estadoDoOrcamento(o, transacoesOrcamento))
+    .sort((a, b) => b.percentagem - a.percentagem)
+    .slice(0, 3);
 
   const aRenovar = (ligacoes ?? []).filter(
     (ligacao) => diasAte(ligacao.valid_until) <= 14
@@ -326,6 +353,53 @@ export default async function DashboardPage() {
               {formatarEuros(saldoTotal)} de{" "}
               {formatarEuros(Number(meta.target_amount))}
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {estadosOrcamentos.length > 0 && (
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(4)}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-sm">
+              Orçamentos
+              <Link
+                href="/orcamentos"
+                className="text-xs font-medium text-primary"
+              >
+                Ver todos →
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {estadosOrcamentos.map((estado) => {
+              const cor = CORES_NIVEL[estado.nivel];
+              return (
+                <Link
+                  key={estado.orcamento.id}
+                  href={`/orcamentos/${estado.orcamento.id}`}
+                  className="flex flex-col gap-1.5"
+                >
+                  <div className="flex items-baseline justify-between text-sm">
+                    <p className="truncate font-medium">
+                      {nomeDoOrcamento(estado.orcamento)}
+                    </p>
+                    <p
+                      className="shrink-0 text-xs font-semibold tabular-nums"
+                      style={{ color: cor }}
+                    >
+                      {estado.restante >= 0
+                        ? `${formatarEuros(estado.restante)} livres`
+                        : `${formatarEuros(-estado.restante)} acima`}
+                    </p>
+                  </div>
+                  <BarraProgresso
+                    percentagem={estado.percentagem}
+                    cor={cor}
+                    className="h-1.5"
+                  />
+                </Link>
+              );
+            })}
           </CardContent>
         </Card>
       )}

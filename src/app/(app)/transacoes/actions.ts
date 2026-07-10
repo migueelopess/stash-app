@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { verificarAlertasDeOrcamentos } from "@/lib/alertas";
 import { createClient } from "@/lib/supabase/server";
 import {
   SELECT_LIGACOES_SYNC,
@@ -35,6 +36,8 @@ export async function sincronizarAgora() {
     novas += resultado.novas;
     contasComErro += resultado.contasComErro;
   }
+
+  await verificarAlertasDeOrcamentos(supabase, user.id);
 
   revalidatePath("/", "layout");
   redirect(
