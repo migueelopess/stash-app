@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, PartyPopper, Sparkles } from "lucide-react";
 import { IconeCategoria } from "@/components/icone-categoria";
+import { OverlayPendente } from "@/components/overlay-pendente";
 import { SelectAutoSubmit } from "@/components/select-auto-submit";
 import { Button } from "@/components/ui/button";
 import { extrairPalavraChave } from "@/lib/categorizacao";
@@ -128,9 +129,10 @@ export default async function PendentesPage({
           <form
             key={grupo.chave}
             action={categorizarGrupo}
-            className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-backwards duration-400"
+            className="relative flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-backwards duration-400"
             style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
           >
+            <OverlayPendente />
             <input
               type="hidden"
               name="ids"

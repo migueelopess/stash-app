@@ -38,6 +38,7 @@ export function GraficoBarras({
           <YAxis hide />
           <Tooltip
             content={<TooltipGrafico />}
+            trigger="click"
             cursor={{ fill: "var(--muted)", opacity: 0.4 }}
           />
           <Bar

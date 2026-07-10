@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
+import { BotaoSubmit } from "@/components/botao-submit";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -89,9 +90,9 @@ export default async function MetasPage({
                 <Input id="target_date" name="target_date" type="date" />
               </div>
             </div>
-            <Button type="submit" size="sm">
+            <BotaoSubmit size="sm" pendingText="A criar…">
               Criar meta
-            </Button>
+            </BotaoSubmit>
           </form>
         </CardContent>
       </Card>
@@ -113,9 +114,9 @@ export default async function MetasPage({
                 <p className="text-sm font-medium">{meta.name}</p>
                 <form action={apagarMeta}>
                   <input type="hidden" name="meta_id" value={meta.id} />
-                  <Button type="submit" variant="ghost" size="icon-sm">
+                  <BotaoSubmit variant="ghost" size="icon-sm">
                     <Trash2 className="text-destructive" />
-                  </Button>
+                  </BotaoSubmit>
                 </form>
               </div>
               <BarraProgresso percentagem={percentagem} />

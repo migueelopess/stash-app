@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { CalendarRange, Gauge, Lightbulb, TrendingUp } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
+import { BotaoSubmit } from "@/components/botao-submit";
 import { IconeCategoria } from "@/components/icone-categoria";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -278,9 +278,9 @@ export default async function OrcamentosPage({
                     Média: {formatarEuros(media)}/mês
                   </p>
                 </div>
-                <Button type="submit" variant="outline" size="sm">
+                <BotaoSubmit variant="outline" size="sm">
                   Criar {formatarEuros(sugerido)}
-                </Button>
+                </BotaoSubmit>
               </form>
             ))}
           </CardContent>
@@ -332,9 +332,9 @@ export default async function OrcamentosPage({
                   <option value="yearly">Anual</option>
                 </select>
               </div>
-              <Button type="submit" size="sm">
+              <BotaoSubmit size="sm" pendingText="A criar…">
                 Criar orçamento
-              </Button>
+              </BotaoSubmit>
             </form>
           </CardContent>
         </Card>

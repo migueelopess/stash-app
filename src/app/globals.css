@@ -120,12 +120,21 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* sem realce cinzento ao tocar (mobile) */
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
+  }
+  /* Selects: foco discreto (borda + anel suave) em vez do outline nativo */
+  select:focus,
+  select:focus-visible {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 25%, transparent);
   }
   /* Recharts: sem outline de foco ao clicar/tocar nos gráficos */
   .recharts-wrapper,

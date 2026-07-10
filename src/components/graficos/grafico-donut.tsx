@@ -40,7 +40,7 @@ export function GraficoDonut({
                 <Cell key={d.name} fill={d.cor} />
               ))}
             </Pie>
-            <Tooltip content={<TooltipGrafico />} />
+            <Tooltip content={<TooltipGrafico />} trigger="click" />
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">

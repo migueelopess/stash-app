@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
+import { BotaoSubmit } from "@/components/botao-submit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,9 +53,9 @@ export default async function CategoriasPage({
           {c.user_id === user?.id ? (
             <form action={apagarCategoria}>
               <input type="hidden" name="categoria_id" value={c.id} />
-              <Button type="submit" variant="ghost" size="icon-sm">
+              <BotaoSubmit variant="ghost" size="icon-sm">
                 <Trash2 className="text-destructive" />
-              </Button>
+              </BotaoSubmit>
             </form>
           ) : (
             <Badge variant="secondary">Base</Badge>
@@ -104,9 +105,9 @@ export default async function CategoriasPage({
               <option value="expense">Gasto</option>
               <option value="income">Ganho</option>
             </select>
-            <Button type="submit" size="sm" className="col-span-3">
+            <BotaoSubmit size="sm" className="col-span-3" pendingText="A adicionar…">
               Adicionar
-            </Button>
+            </BotaoSubmit>
           </form>
         </CardContent>
       </Card>

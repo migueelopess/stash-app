@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
+import { BotaoSubmit } from "@/components/botao-submit";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { apagarRegra } from "./actions";
@@ -90,9 +91,9 @@ export default async function RegrasPage({
           </div>
           <form action={apagarRegra}>
             <input type="hidden" name="regra_id" value={r.id} />
-            <Button type="submit" variant="ghost" size="icon-sm">
+            <BotaoSubmit variant="ghost" size="icon-sm">
               <Trash2 className="text-destructive" />
-            </Button>
+            </BotaoSubmit>
           </form>
         </div>
       ))}

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { WalletMinimal } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
+import { BotaoSubmit } from "@/components/botao-submit";
 import {
   Card,
   CardContent,
@@ -65,9 +65,9 @@ export default async function LoginPage({
                 Credenciais inválidas. Tenta novamente.
               </p>
             )}
-            <Button type="submit" className="w-full">
+            <BotaoSubmit className="w-full" pendingText="A entrar…">
               Entrar
-            </Button>
+            </BotaoSubmit>
           </form>
         </CardContent>
       </Card>

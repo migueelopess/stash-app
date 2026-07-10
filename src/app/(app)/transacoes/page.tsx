@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, RefreshCw, Sparkles } from "lucide-react";
+import { BotaoSubmit } from "@/components/botao-submit";
 import { FiltrosTransacoes } from "@/components/filtros-transacoes";
 import { IconeCategoria } from "@/components/icone-categoria";
 import { PesquisaTransacoes } from "@/components/pesquisa-transacoes";
@@ -179,15 +180,14 @@ export default async function TransacoesPage({
           )}
         </div>
         <form action={sincronizarAgora}>
-          <Button
-            type="submit"
+          <BotaoSubmit
             variant="outline"
             size="icon-lg"
             className="rounded-full shadow-sm"
             title="Sincronizar agora"
           >
             <RefreshCw className="size-4.5" />
-          </Button>
+          </BotaoSubmit>
         </form>
       </div>
 

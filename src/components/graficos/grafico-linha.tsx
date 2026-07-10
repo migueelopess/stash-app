@@ -40,6 +40,7 @@ export function GraficoLinha({
         <YAxis hide domain={["auto", "auto"]} />
         <Tooltip
           content={<TooltipGrafico />}
+          trigger="click"
           cursor={{
             stroke: "var(--muted-foreground)",
             strokeDasharray: "3 3",

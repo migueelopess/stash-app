@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Sparkles } from "lucide-react";
+import { BotaoSubmit } from "@/components/botao-submit";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -85,7 +86,7 @@ export default async function TransacaoPage({
     null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
@@ -177,7 +178,7 @@ export default async function TransacaoPage({
           </p>
         )}
 
-        <Button type="submit">Guardar</Button>
+        <BotaoSubmit pendingText="A guardar…">Guardar</BotaoSubmit>
       </form>
     </div>
   );

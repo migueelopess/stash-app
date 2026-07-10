@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
+import { BotaoSubmit } from "@/components/botao-submit";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -70,7 +71,7 @@ export default async function OrcamentoPage({
   const cor = CORES_NIVEL[estado.nivel];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       <div className="flex items-center gap-2 pt-1">
         <Button
           variant="ghost"
@@ -161,18 +162,18 @@ export default async function OrcamentoPage({
                 </select>
               </div>
             </div>
-            <Button type="submit" size="sm">
+            <BotaoSubmit size="sm" pendingText="A guardar…">
               Guardar
-            </Button>
+            </BotaoSubmit>
           </form>
         </CardContent>
       </Card>
 
       <form action={apagarOrcamento}>
         <input type="hidden" name="orcamento_id" value={orcamento.id} />
-        <Button type="submit" variant="destructive" size="sm" className="w-full">
+        <BotaoSubmit variant="destructive" size="sm" className="w-full">
           <Trash2 className="size-4" /> Apagar orçamento
-        </Button>
+        </BotaoSubmit>
       </form>
     </div>
   );
