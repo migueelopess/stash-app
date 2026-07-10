@@ -11,7 +11,10 @@ import { BarraProgresso } from "@/components/barra-progresso";
 import { ContadorEuros } from "@/components/contador-euros";
 import { DonutComToggle } from "@/components/graficos/donut-com-toggle";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
-import { GraficoLinha } from "@/components/graficos/grafico-linha";
+import {
+  GraficoSaldoIntervalos,
+  type Intervalo,
+} from "@/components/graficos/grafico-saldo-intervalos";
 import { GraficoSparkline } from "@/components/graficos/grafico-sparkline";
 import { IconeCategoria } from "@/components/icone-categoria";
 import {
@@ -35,8 +38,16 @@ import { diasAte, formatarEuros, tituloTransacao } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-const MESES_HISTORICO = 6;
-const DIAS_SERIE_SALDO = 90;
+const MESES_HISTORICO = 6; // gráfico de barras
+const MESES_FETCH = 12; // histórico buscado (para o intervalo "1 ano")
+
+const DIAS_POR_INTERVALO: Record<Intervalo, number> = {
+  "7d": 7,
+  "1m": 30,
+  "3m": 90,
+  "6m": 180,
+  "1a": 365,
+};
 
 // Entrada em cascata dos blocos do dashboard
 const ANIM =
@@ -70,7 +81,7 @@ export default async function DashboardPage() {
   const supabase = await createClient();
 
   const inicioHistorico = new Date();
-  inicioHistorico.setMonth(inicioHistorico.getMonth() - MESES_HISTORICO);
+  inicioHistorico.setMonth(inicioHistorico.getMonth() - MESES_FETCH);
   inicioHistorico.setDate(1);
 
   const [
@@ -139,8 +150,13 @@ export default async function DashboardPage() {
   const barras = ganhosVsGastosPorMes(transacoes, MESES_HISTORICO);
   const donutGastos = gastosPorCategoria(transacoes);
   const donutGanhos = ganhosPorCategoria(transacoes);
-  const linha = serieDeSaldo(saldoTotal, transacoes, DIAS_SERIE_SALDO);
-  const sparkline = serieDeSaldo(saldoTotal, transacoes, 30);
+  const seriesSaldo = Object.fromEntries(
+    Object.entries(DIAS_POR_INTERVALO).map(([intervalo, dias]) => [
+      intervalo,
+      serieDeSaldo(saldoTotal, transacoes, dias),
+    ])
+  ) as Record<Intervalo, { dia: string; saldo: number }[]>;
+  const sparkline = seriesSaldo["1m"];
   const salarioMes = somaDoMesPorCategoria(transacoes, "Salário");
   const tarefasMes = somaDoMesPorCategoria(transacoes, "Tarefas");
   const topGastos = topGastosDoMes(transacoes, 5);
@@ -361,12 +377,10 @@ export default async function DashboardPage() {
 
       <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(7)}>
         <CardHeader>
-          <CardTitle className="text-sm">
-            Evolução do saldo (90 dias)
-          </CardTitle>
+          <CardTitle className="text-sm">Evolução do saldo</CardTitle>
         </CardHeader>
         <CardContent>
-          <GraficoLinha dados={linha} />
+          <GraficoSaldoIntervalos series={seriesSaldo} />
         </CardContent>
       </Card>
     </div>

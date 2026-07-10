@@ -102,8 +102,10 @@ export function serieDeSaldo(
 ): { dia: string; saldo: number }[] {
   const pontos: { dia: string; saldo: number }[] = [];
   const hoje = new Date();
+  // ~45 pontos independentemente do intervalo (7 dias → diário; 1 ano → semanal)
+  const passo = Math.max(1, Math.round(dias / 45));
 
-  for (let i = 0; i <= dias; i += 3) {
+  for (let i = 0; i <= dias; i += passo) {
     const d = new Date(hoje);
     d.setDate(d.getDate() - (dias - i));
     const iso = d.toISOString().slice(0, 10);
