@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { aprenderEAplicar } from "@/lib/aprendizagem";
+import { chaveDoNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 
 export async function categorizarTransacao(formData: FormData) {
   const transacaoId = formData.get("transacao_id") as string;
   const categoriaId = (formData.get("category_id") as string) || null;
+  const nome = ((formData.get("nome") as string) ?? "").trim();
+  const nomePredefinido = ((formData.get("nome_predefinido") as string) ?? "").trim();
 
   const supabase = await createClient();
   const {
@@ -45,6 +48,25 @@ export async function categorizarTransacao(formData: FormData) {
     await aprenderEAplicar(supabase, user.id, transacao, categoriaId, [
       transacaoId,
     ]);
+  }
+
+  // Nome personalizado: guardar quando difere do resolvido; limpar remove
+  const chave = chaveDoNome(transacao.description, transacao.counterparty);
+  if (chave) {
+    if (nome && nome !== nomePredefinido) {
+      const { error: erroNome } = await supabase
+        .from("merchant_names")
+        .upsert(
+          { user_id: user.id, match_value: chave, display_name: nome },
+          { onConflict: "user_id,match_value" }
+        );
+      if (erroNome) console.error("Erro ao guardar nome:", erroNome);
+    } else if (!nome) {
+      await supabase
+        .from("merchant_names")
+        .delete()
+        .eq("match_value", chave);
+    }
   }
 
   revalidatePath("/", "layout");

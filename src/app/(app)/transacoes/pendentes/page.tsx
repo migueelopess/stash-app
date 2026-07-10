@@ -4,7 +4,8 @@ import { IconeCategoria } from "@/components/icone-categoria";
 import { SelectAutoSubmit } from "@/components/select-auto-submit";
 import { Button } from "@/components/ui/button";
 import { extrairPalavraChave } from "@/lib/categorizacao";
-import { formatarEuros, tituloTransacao } from "@/lib/format";
+import { formatarEuros } from "@/lib/format";
+import { resolverNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { categorizarGrupo } from "./actions";
@@ -32,16 +33,21 @@ export default async function PendentesPage({
   const { erro } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: pendentesRaw }, { data: categorias }] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("id, booking_date, amount, description, counterparty")
-      .is("category_id", null)
-      .order("booking_date", { ascending: false }),
-    supabase.from("categories").select("id, name, kind").order("name"),
-  ]);
+  const [{ data: pendentesRaw }, { data: categorias }, { data: nomesRaw }] =
+    await Promise.all([
+      supabase
+        .from("transactions")
+        .select("id, booking_date, amount, description, counterparty")
+        .is("category_id", null)
+        .order("booking_date", { ascending: false }),
+      supabase.from("categories").select("id, name, kind").order("name"),
+      supabase.from("merchant_names").select("match_value, display_name"),
+    ]);
 
   const pendentes = (pendentesRaw ?? []) as Pendente[];
+  const nomes = new Map(
+    (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
+  );
 
   // Agrupar pelo mesmo "cérebro" da aprendizagem: uma escolha → grupo todo
   const grupos = new Map<string, Grupo>();
@@ -53,7 +59,7 @@ export default async function PendentesPage({
       t.id;
     const grupo = grupos.get(chave) ?? {
       chave,
-      titulo: tituloTransacao(t.counterparty, t.description),
+      titulo: resolverNome(t.description, t.counterparty, nomes),
       transacoes: [],
       total: 0,
     };

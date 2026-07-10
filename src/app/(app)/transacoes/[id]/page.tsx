@@ -8,9 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { extrairPalavraChave } from "@/lib/categorizacao";
 import { formatarData, formatarEuros } from "@/lib/format";
+import { resolverNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { categorizarTransacao } from "./actions";
@@ -52,11 +54,30 @@ export default async function TransacaoPage({
   const transacao = data as unknown as Detalhe;
 
   const valor = Number(transacao.amount);
-  const { data: categorias } = await supabase
-    .from("categories")
-    .select("id, name, kind")
-    .eq("kind", valor > 0 ? "income" : "expense")
-    .order("name");
+  const [{ data: categorias }, { data: nomesRaw }] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name, kind")
+      .eq("kind", valor > 0 ? "income" : "expense")
+      .order("name"),
+    supabase.from("merchant_names").select("match_value, display_name"),
+  ]);
+
+  const nomes = new Map(
+    (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
+  );
+  // Predefinido = sem personalizações (base de comparação para saber
+  // se o utilizador escreveu um nome próprio)
+  const nomePredefinido = resolverNome(
+    transacao.description,
+    transacao.counterparty,
+    new Map()
+  );
+  const nomeAtual = resolverNome(
+    transacao.description,
+    transacao.counterparty,
+    nomes
+  );
 
   const palavraChave =
     extrairPalavraChave(transacao.description) ??
@@ -88,9 +109,7 @@ export default async function TransacaoPage({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between text-base">
-            <span className="truncate">
-              {transacao.counterparty ?? "Transação"}
-            </span>
+            <span className="truncate">{nomeAtual}</span>
             <span
               className={cn(
                 "tabular-nums",
@@ -113,6 +132,22 @@ export default async function TransacaoPage({
 
       <form action={categorizarTransacao} className="flex flex-col gap-4">
         <input type="hidden" name="transacao_id" value={transacao.id} />
+        <input type="hidden" name="nome_predefinido" value={nomePredefinido} />
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="nome">Nome</Label>
+          <Input
+            id="nome"
+            name="nome"
+            defaultValue={nomeAtual}
+            placeholder={nomePredefinido}
+            className="h-10 rounded-xl border-border/60 bg-card shadow-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Dá um nome tipo “Intermarché” — todas as transações deste sítio
+            passam a mostrá-lo.
+          </p>
+        </div>
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="category_id">Categoria</Label>

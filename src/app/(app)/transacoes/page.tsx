@@ -2,8 +2,13 @@ import Link from "next/link";
 import { ChevronRight, RefreshCw, Sparkles } from "lucide-react";
 import { FiltrosTransacoes } from "@/components/filtros-transacoes";
 import { IconeCategoria } from "@/components/icone-categoria";
+import { PesquisaTransacoes } from "@/components/pesquisa-transacoes";
 import { Button } from "@/components/ui/button";
-import { formatarEuros, tituloTransacao } from "@/lib/format";
+import { formatarEuros } from "@/lib/format";
+import {
+  palavrasChaveParaPesquisa,
+  resolverNome,
+} from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { sincronizarAgora } from "./actions";
@@ -30,6 +35,7 @@ interface Filtros {
   mes?: string; // "2026-07"
   tipo?: string; // ganhos | gastos
   conta?: string; // uuid
+  q?: string; // pesquisa
   n?: string; // quantas mostrar
   sync?: string;
   novas?: string;
@@ -71,6 +77,14 @@ export default async function TransacoesPage({
   const limite = Math.max(Number(filtros.n) || POR_PAGINA, POR_PAGINA);
   const supabase = await createClient();
 
+  // Nomes personalizados do utilizador (para mostrar e para pesquisar)
+  const { data: nomesRaw } = await supabase
+    .from("merchant_names")
+    .select("match_value, display_name");
+  const nomes = new Map(
+    (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
+  );
+
   let query = supabase
     .from("transactions")
     .select(
@@ -91,6 +105,25 @@ export default async function TransacoesPage({
   if (filtros.tipo === "ganhos") query = query.gt("amount", 0);
   if (filtros.tipo === "gastos") query = query.lt("amount", 0);
   if (filtros.conta) query = query.eq("account_id", filtros.conta);
+
+  // Pesquisa: texto cru + palavras-chave cujo nome bonito corresponde
+  // (pesquisar "intermarché" também encontra as "INTERMA" do banco)
+  const pesquisa = filtros.q?.trim();
+  if (pesquisa) {
+    const seguro = pesquisa.replace(/[,()"'\\%_]/g, " ").trim();
+    const padroes = new Set<string>();
+    if (seguro) {
+      padroes.add(`description.ilike.*${seguro}*`);
+      padroes.add(`counterparty.ilike.*${seguro}*`);
+    }
+    for (const palavra of palavrasChaveParaPesquisa(pesquisa, nomes)) {
+      const limpa = palavra.replace(/[,()"'\\%_]/g, " ").trim();
+      if (limpa) padroes.add(`description.ilike.*${limpa}*`);
+    }
+    if (padroes.size > 0) {
+      query = query.or([...padroes].join(","));
+    }
+  }
 
   const [
     { data: transacoesRaw },
@@ -130,6 +163,7 @@ export default async function TransacoesPage({
   if (filtros.mes) paramsProximos.set("mes", filtros.mes);
   if (filtros.tipo) paramsProximos.set("tipo", filtros.tipo);
   if (filtros.conta) paramsProximos.set("conta", filtros.conta);
+  if (filtros.q) paramsProximos.set("q", filtros.q);
   paramsProximos.set("n", String(limite + POR_PAGINA));
 
   return (
@@ -191,11 +225,15 @@ export default async function TransacoesPage({
         </Link>
       )}
 
+      <PesquisaTransacoes />
+
       <FiltrosTransacoes contas={contas ?? []} meses={opcoesDeMes()} />
 
       {visiveis.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          Sem transações para mostrar. Liga um banco e sincroniza.
+          {pesquisa
+            ? `Nada encontrado para “${pesquisa}”.`
+            : "Sem transações para mostrar. Liga um banco e sincroniza."}
         </p>
       )}
 
@@ -239,7 +277,7 @@ export default async function TransacoesPage({
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
-                        {tituloTransacao(t.counterparty, t.description)}
+                        {resolverNome(t.description, t.counterparty, nomes)}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {t.categories?.name ?? "Por categorizar"}

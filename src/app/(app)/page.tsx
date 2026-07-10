@@ -34,7 +34,8 @@ import {
   topGastosDoMes,
   type TransacaoDash,
 } from "@/lib/dashboard";
-import { diasAte, formatarEuros, tituloTransacao } from "@/lib/format";
+import { diasAte, formatarEuros } from "@/lib/format";
+import { resolverNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -89,6 +90,7 @@ export default async function DashboardPage() {
     { data: transacoesRaw },
     { data: ligacoes },
     { data: metas },
+    { data: nomesRaw },
   ] = await Promise.all([
     supabase.from("accounts").select("balance"),
     supabase
@@ -107,6 +109,7 @@ export default async function DashboardPage() {
       .select("id, name, target_amount")
       .order("created_at")
       .limit(1),
+    supabase.from("merchant_names").select("match_value, display_name"),
   ]);
 
   if (!contas || contas.length === 0) {
@@ -142,6 +145,9 @@ export default async function DashboardPage() {
     contraparte: t.counterparty,
   }));
 
+  const nomes = new Map(
+    (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
+  );
   const saldoTotal = contas.reduce(
     (soma, c) => soma + Number(c.balance ?? 0),
     0
@@ -357,9 +363,10 @@ export default async function DashboardPage() {
                 <IconeCategoria icone={t.icone} cor={t.cor} ganho={false} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
-                    {tituloTransacao(
+                    {resolverNome(
+                      t.descricao ?? null,
                       t.contraparte ?? null,
-                      t.descricao ?? null
+                      nomes
                     )}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
