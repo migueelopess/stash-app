@@ -31,18 +31,23 @@ export async function sincronizarAgora() {
 
   let novas = 0;
   let contasComErro = 0;
+  let limiteAtingido = false;
   for (const ligacao of (ligacoes ?? []) as unknown as LigacaoParaSync[]) {
     const resultado = await sincronizarLigacao(supabase, ligacao);
     novas += resultado.novas;
     contasComErro += resultado.contasComErro;
+    limiteAtingido = limiteAtingido || resultado.limiteAtingido;
   }
 
   await verificarAlertasDeOrcamentos(supabase, user.id);
 
   revalidatePath("/", "layout");
-  redirect(
-    contasComErro > 0
-      ? "/transacoes?sync=erro"
-      : `/transacoes?sync=ok&novas=${novas}`
-  );
+  if (contasComErro > 0) {
+    redirect("/transacoes?sync=erro");
+  }
+  // Limite diário só interessa avisar se não trouxe nada de novo
+  if (limiteAtingido && novas === 0) {
+    redirect("/transacoes?sync=limite");
+  }
+  redirect(`/transacoes?sync=ok&novas=${novas}`);
 }

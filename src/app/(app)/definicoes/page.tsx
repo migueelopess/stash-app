@@ -36,8 +36,8 @@ export default async function DefinicoesPage() {
   } = await supabase.auth.getUser();
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Definições</h1>
+    <div className="flex flex-col gap-6 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
+      <h1 className="text-2xl font-bold">Definições</h1>
 
       <AtivarNotificacoes />
 

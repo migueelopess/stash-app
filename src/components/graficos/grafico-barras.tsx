@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartInterativo } from "./chart-interativo";
 import { TooltipGrafico } from "./tooltip-grafico";
 
 const COR_GANHOS = "#10b981";
@@ -20,6 +21,7 @@ export function GraficoBarras({
 }) {
   return (
     <div className="flex flex-col gap-2">
+      <ChartInterativo>
       <ResponsiveContainer width="100%" height={200}>
         <BarChart
           accessibilityLayer={false}
@@ -47,6 +49,7 @@ export function GraficoBarras({
             fill={COR_GANHOS}
             radius={[99, 99, 99, 99]}
             barSize={10}
+            isAnimationActive={false}
           />
           <Bar
             dataKey="gastos"
@@ -54,9 +57,11 @@ export function GraficoBarras({
             fill={COR_GASTOS}
             radius={[99, 99, 99, 99]}
             barSize={10}
+            isAnimationActive={false}
           />
         </BarChart>
       </ResponsiveContainer>
+      </ChartInterativo>
       <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span

@@ -204,6 +204,12 @@ export default async function TransacoesPage({
           A sincronização falhou nalgumas contas. Tenta novamente.
         </p>
       )}
+      {filtros.sync === "limite" && (
+        <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+          Já sincronizaste o máximo de vezes por hoje (limite do banco). A app
+          volta a atualizar sozinha amanhã de manhã.
+        </p>
+      )}
 
       {(nPendentes ?? 0) > 0 && (
         <Link

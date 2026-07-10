@@ -1,6 +1,7 @@
 "use client";
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { ChartInterativo } from "./chart-interativo";
 import { TooltipGrafico } from "./tooltip-grafico";
 
 const euros = new Intl.NumberFormat("pt-PT", {
@@ -23,7 +24,7 @@ export function GraficoDonut({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative">
+      <ChartInterativo className="relative">
         <ResponsiveContainer width="100%" height={200}>
           <PieChart accessibilityLayer={false}>
             <Pie
@@ -35,6 +36,7 @@ export function GraficoDonut({
               paddingAngle={3}
               cornerRadius={8}
               strokeWidth={0}
+              isAnimationActive={false}
             >
               {dados.map((d) => (
                 <Cell key={d.name} fill={d.cor} />
@@ -51,7 +53,7 @@ export function GraficoDonut({
             {eurosInteiros.format(total)}
           </p>
         </div>
-      </div>
+      </ChartInterativo>
       <ul className="flex flex-col gap-2.5">
         {dados.map((d) => {
           const percentagem = total > 0 ? (d.valor / total) * 100 : 0;

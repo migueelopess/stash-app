@@ -29,10 +29,17 @@ export interface LigacaoParaSync {
 export interface ResultadoSync {
   novas: number;
   contasComErro: number;
+  limiteAtingido: boolean; // 429 da Enable Banking (limite PSD2 diário)
 }
 
 function dataIso(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+// O limite PSD2 (~4 acessos não-assistidos/dia) devolve 429; é esperado,
+// não um erro a alarmar o utilizador.
+function eLimiteDiario(e: unknown): boolean {
+  return String(e).includes("429");
 }
 
 // Sem entry_reference (alguns bancos omitem), gerar um id determinístico
@@ -140,17 +147,24 @@ async function sincronizarConta(
     continuationKey = pagina.continuation_key;
   } while (continuationKey);
 
-  // Atualizar o saldo
-  const saldos = await obterSaldos(conta.eb_account_uid);
-  const saldo = saldos.find((s) => s.balance_type === "CLBD") ?? saldos[0];
-  if (saldo) {
-    await supabase
-      .from("accounts")
-      .update({
-        balance: saldo.balance_amount.amount,
-        balance_updated_at: new Date().toISOString(),
-      })
-      .eq("id", conta.id);
+  // Atualizar o saldo — best-effort: um 429 aqui não deve perder as
+  // transações já sincronizadas nem alarmar (o saldo antigo mantém-se).
+  try {
+    const saldos = await obterSaldos(conta.eb_account_uid);
+    const saldo = saldos.find((s) => s.balance_type === "CLBD") ?? saldos[0];
+    if (saldo) {
+      await supabase
+        .from("accounts")
+        .update({
+          balance: saldo.balance_amount.amount,
+          balance_updated_at: new Date().toISOString(),
+        })
+        .eq("id", conta.id);
+    }
+  } catch (e) {
+    if (!eLimiteDiario(e)) {
+      console.error(`Erro ao obter saldo da conta ${conta.eb_account_uid}:`, e);
+    }
   }
 
   return novas;
@@ -167,7 +181,7 @@ export async function sincronizarLigacao(
       .from("bank_connections")
       .update({ status: "expired" })
       .eq("id", ligacao.id);
-    return { novas: 0, contasComErro: 0 };
+    return { novas: 0, contasComErro: 0, limiteAtingido: false };
   }
 
   // Regras do dono da ligação + mapa de categorias para o dicionário
@@ -185,6 +199,7 @@ export async function sincronizarLigacao(
 
   let novas = 0;
   let contasComErro = 0;
+  let limiteAtingido = false;
 
   for (const conta of ligacao.accounts) {
     try {
@@ -195,11 +210,15 @@ export async function sincronizarLigacao(
         categoriasPorNome
       );
     } catch (e) {
-      contasComErro++;
-      console.error(
-        `Erro ao sincronizar conta ${conta.eb_account_uid} (${ligacao.bank_name}):`,
-        e
-      );
+      if (eLimiteDiario(e)) {
+        limiteAtingido = true; // esperado — não conta como erro
+      } else {
+        contasComErro++;
+        console.error(
+          `Erro ao sincronizar conta ${conta.eb_account_uid} (${ligacao.bank_name}):`,
+          e
+        );
+      }
     }
   }
 
@@ -208,7 +227,7 @@ export async function sincronizarLigacao(
     .update({ last_synced_at: new Date().toISOString() })
     .eq("id", ligacao.id);
 
-  return { novas, contasComErro };
+  return { novas, contasComErro, limiteAtingido };
 }
 
 export const SELECT_LIGACOES_SYNC =

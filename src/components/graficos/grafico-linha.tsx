@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartInterativo } from "./chart-interativo";
 import { TooltipGrafico } from "./tooltip-grafico";
 
 export function GraficoLinha({
@@ -16,6 +17,7 @@ export function GraficoLinha({
   dados: { dia: string; saldo: number }[];
 }) {
   return (
+    <ChartInterativo>
     <ResponsiveContainer width="100%" height={190}>
       <AreaChart
         accessibilityLayer={false}
@@ -56,8 +58,10 @@ export function GraficoLinha({
           fill="url(#saldoGradiente)"
           dot={false}
           activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--card)" }}
+          isAnimationActive={false}
         />
       </AreaChart>
     </ResponsiveContainer>
+    </ChartInterativo>
   );
 }

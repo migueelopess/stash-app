@@ -66,7 +66,7 @@ export default async function CategoriasPage({
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
@@ -76,7 +76,7 @@ export default async function CategoriasPage({
         >
           <ArrowLeft />
         </Button>
-        <h1 className="text-xl font-semibold">Categorias</h1>
+        <h1 className="text-xl font-bold">Categorias</h1>
       </div>
 
       {erro && (
