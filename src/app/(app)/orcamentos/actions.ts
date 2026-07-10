@@ -9,7 +9,7 @@ export async function criarOrcamento(formData: FormData) {
   const valor = Number(formData.get("amount"));
   const period = formData.get("period") as string;
 
-  if (!Number.isFinite(valor) || valor <= 0 || !["monthly", "yearly"].includes(period)) {
+  if (!Number.isFinite(valor) || valor <= 0 || !["weekly", "monthly", "yearly"].includes(period)) {
     redirect("/orcamentos?erro=dados");
   }
 
@@ -46,7 +46,7 @@ export async function atualizarOrcamento(formData: FormData) {
   const valor = Number(formData.get("amount"));
   const period = formData.get("period") as string;
 
-  if (!Number.isFinite(valor) || valor <= 0 || !["monthly", "yearly"].includes(period)) {
+  if (!Number.isFinite(valor) || valor <= 0 || !["weekly", "monthly", "yearly"].includes(period)) {
     redirect(`/orcamentos/${orcamentoId}?erro=dados`);
   }
 

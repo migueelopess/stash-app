@@ -14,12 +14,14 @@ import { Label } from "@/components/ui/label";
 import { formatarEuros } from "@/lib/format";
 import {
   CORES_NIVEL,
+  FIM_PERIODO,
   estadoDoOrcamento,
   nomeDoOrcamento,
   type OrcamentoComCategoria,
   type TransacaoParaOrcamento,
 } from "@/lib/orcamentos";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import { apagarOrcamento, atualizarOrcamento } from "../actions";
 
 const MENSAGENS_ERRO: Record<string, string> = {
@@ -105,6 +107,22 @@ export default async function OrcamentoPage({
             {estado.ritmoDiario !== null &&
               ` · ~${formatarEuros(estado.ritmoDiario)}/dia`}
           </p>
+          {estado.projecao !== null && estado.nivel !== "ultrapassado" && (
+            <p
+              className={cn(
+                "text-xs",
+                estado.projecao > estado.limite
+                  ? "font-medium text-rose-600 dark:text-rose-400"
+                  : "text-muted-foreground"
+              )}
+            >
+              🔮 Ao ritmo atual acabas {FIM_PERIODO[orcamento.period].replace("da ", "a ").replace("do ", "o ")} em ~
+              {formatarEuros(estado.projecao)}
+              {estado.projecao > estado.limite &&
+                ` (${formatarEuros(estado.projecao - estado.limite)} acima do limite)`}
+              .
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -137,6 +155,7 @@ export default async function OrcamentoPage({
                   defaultValue={orcamento.period}
                   className="h-10 rounded-xl border border-border/60 bg-card px-3 text-sm shadow-sm"
                 >
+                  <option value="weekly">Semanal</option>
                   <option value="monthly">Mensal</option>
                   <option value="yearly">Anual</option>
                 </select>
