@@ -125,11 +125,11 @@
     /* sem realce cinzento ao tocar (mobile) */
     -webkit-tap-highlight-color: transparent;
   }
+  html {
+    @apply bg-background font-sans;
+  }
   body {
     @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
   }
   /* Selects: foco discreto (borda + anel suave) em vez do outline nativo */
   select:focus,
