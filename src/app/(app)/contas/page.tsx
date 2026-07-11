@@ -1,4 +1,5 @@
-import { Landmark, TriangleAlert } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Landmark, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,8 +95,18 @@ export default async function ContasPage({
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Contas</h1>
+    <div className="flex flex-col gap-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          nativeButton={false}
+          render={<Link href="/definicoes" />}
+        >
+          <ArrowLeft />
+        </Button>
+        <h1 className="text-xl font-bold">Contas e bancos</h1>
+      </div>
 
       {sucesso && (
         <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">

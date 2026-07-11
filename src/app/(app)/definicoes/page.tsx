@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ChevronRight, ListChecks, PiggyBank, Tags } from "lucide-react";
+import {
+  ChevronRight,
+  Landmark,
+  ListChecks,
+  PiggyBank,
+  Tags,
+} from "lucide-react";
 import { AtivarNotificacoes } from "@/components/ativar-notificacoes";
 import { SeletorTema } from "@/components/seletor-tema";
 import { Button } from "@/components/ui/button";
@@ -7,6 +13,13 @@ import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
 
 const seccoes = [
+  {
+    href: "/contas",
+    titulo: "Contas e bancos",
+    descricao: "Ligar bancos, ver saldos e renovar autorizações",
+    icon: Landmark,
+    cor: "#10b981",
+  },
   {
     href: "/definicoes/categorias",
     titulo: "Categorias",
