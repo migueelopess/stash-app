@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { CalendarRange, Gauge, Lightbulb, TrendingUp } from "lucide-react";
+import { CalendarRange, Gauge, Lightbulb, Plus, TrendingUp } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
 import { BotaoSubmit } from "@/components/botao-submit";
+import { FormularioOrcamento } from "@/components/form/formulario-orcamento";
 import { IconeCategoria } from "@/components/icone-categoria";
+import { ModalSheet } from "@/components/modal-sheet";
+import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -10,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { formatarEuros } from "@/lib/format";
 import {
   CORES_NIVEL,
@@ -47,32 +49,49 @@ interface CategoriaLivre {
 export default async function OrcamentosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string }>;
+  searchParams: Promise<{ erro?: string; form?: string }>;
 }) {
-  const { erro } = await searchParams;
+  const { erro, form } = await searchParams;
   const supabase = await createClient();
 
   const inicioAno = `${new Date().getFullYear() - 1}-10-01`; // cobre médias de 3 meses em janeiro
-  const [{ data: orcamentosRaw }, { data: transacoesRaw }, { data: categorias }] =
-    await Promise.all([
-      supabase
-        .from("budgets")
-        .select(
-          "id, category_id, amount, period, categories (name, color, icon)"
-        ),
-      supabase
-        .from("transactions")
-        .select("booking_date, amount, category_id")
-        .lt("amount", 0)
-        .gte("booking_date", inicioAno),
-      supabase
-        .from("categories")
-        .select("id, name, color, icon")
-        .eq("kind", "expense")
-        .order("name"),
-    ]);
+  const [
+    { data: orcamentosRaw },
+    { data: transacoesRaw },
+    { data: categoriasRaw },
+    overrides,
+  ] = await Promise.all([
+    supabase
+      .from("budgets")
+      .select(
+        "id, category_id, amount, period, categories (name, color, icon)"
+      ),
+    supabase
+      .from("transactions")
+      .select("booking_date, amount, category_id")
+      .lt("amount", 0)
+      .gte("booking_date", inicioAno),
+    supabase
+      .from("categories")
+      .select("id, name, color, icon")
+      .eq("kind", "expense")
+      .order("name"),
+    carregarCoresOverride(supabase),
+  ]);
 
-  const orcamentos = (orcamentosRaw ?? []) as unknown as OrcamentoComCategoria[];
+  // Aplicar cores personalizadas
+  const categorias = ((categoriasRaw ?? []) as CategoriaLivre[]).map((c) => ({
+    ...c,
+    color: corCategoria(overrides, c.id, c.color),
+  }));
+  const orcamentos = (
+    (orcamentosRaw ?? []) as unknown as OrcamentoComCategoria[]
+  ).map((o) => ({
+    ...o,
+    categories: o.categories
+      ? { ...o.categories, color: corCategoria(overrides, o.category_id, o.categories.color) }
+      : null,
+  }));
   const transacoes: TransacaoParaOrcamento[] = (transacoesRaw ?? []).map(
     (t) => ({
       booking_date: t.booking_date,
@@ -93,7 +112,7 @@ export default async function OrcamentosPage({
   const comOrcamento = new Set(
     orcamentos.map((o) => o.category_id).filter(Boolean)
   );
-  const categoriasLivres = ((categorias ?? []) as CategoriaLivre[]).filter(
+  const categoriasLivres = categorias.filter(
     (c) => !comOrcamento.has(c.id)
   );
 
@@ -287,58 +306,28 @@ export default async function OrcamentosPage({
         </Card>
       )}
 
+      {/* Botão flutuante + para novo orçamento */}
       {(categoriasLivres.length > 0 || !temGlobal) && (
-        <Card className="border-none shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-sm">Novo orçamento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={criarOrcamento} className="flex flex-col gap-2">
-              <select
-                name="category_id"
-                required
-                defaultValue=""
-                className="h-10 rounded-xl border border-border/60 bg-card px-3 text-sm shadow-sm"
-              >
-                <option value="" disabled>
-                  Escolher categoria…
-                </option>
-                {!temGlobal && (
-                  <option value="global">🌍 Todos os gastos (global)</option>
-                )}
-                {categoriasLivres.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  name="amount"
-                  type="number"
-                  step="0.01"
-                  min="1"
-                  placeholder="Limite (€)"
-                  required
-                  className="h-10 rounded-xl border-border/60 bg-card shadow-sm"
-                />
-                <select
-                  name="period"
-                  defaultValue="monthly"
-                  className="h-10 rounded-xl border border-border/60 bg-card px-3 text-sm shadow-sm"
-                >
-                  <option value="weekly">Semanal</option>
-                  <option value="monthly">Mensal</option>
-                  <option value="yearly">Anual</option>
-                </select>
-              </div>
-              <BotaoSubmit size="sm" pendingText="A criar…">
-                Criar orçamento
-              </BotaoSubmit>
-            </form>
-          </CardContent>
-        </Card>
+        <Link
+          href="/orcamentos?form=orcamento"
+          scroll={false}
+          aria-label="Novo orçamento"
+          className="fixed bottom-24 right-4 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95"
+        >
+          <Plus className="size-6" strokeWidth={2.5} />
+        </Link>
       )}
+
+      <ModalSheet
+        aberto={form === "orcamento"}
+        titulo="Novo orçamento"
+        voltarUrl="/orcamentos"
+      >
+        <FormularioOrcamento
+          categorias={categoriasLivres}
+          temGlobal={temGlobal}
+        />
+      </ModalSheet>
     </div>
   );
 }

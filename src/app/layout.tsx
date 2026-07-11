@@ -35,8 +35,10 @@ export const viewport: Viewport = {
   ],
 };
 
-// Dark mode segue o sistema; corre antes da hidratação para evitar flash
-const scriptTema = `(function(){var m=window.matchMedia("(prefers-color-scheme: dark)");function aplicar(){document.documentElement.classList.toggle("dark",m.matches)}aplicar();m.addEventListener("change",aplicar)})();`;
+// Tema: preferência guardada (sistema/claro/escuro); corre antes da
+// hidratação para evitar flash. Exposto em window.__aplicarTema para o
+// seletor nas Definições reaplicar de imediato.
+const scriptTema = `(function(){var m=window.matchMedia("(prefers-color-scheme: dark)");function pref(){try{return localStorage.getItem("tema")||"sistema"}catch(e){return "sistema"}}function aplicar(){var p=pref();var escuro=p==="escuro"||(p==="sistema"&&m.matches);document.documentElement.classList.toggle("dark",escuro)}aplicar();m.addEventListener("change",aplicar);window.__aplicarTema=aplicar})();`;
 
 export default function RootLayout({
   children,

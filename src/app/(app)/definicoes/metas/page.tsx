@@ -1,19 +1,14 @@
 import Link from "next/link";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
 import { BotaoSubmit } from "@/components/botao-submit";
+import { FormularioMeta } from "@/components/form/formulario-meta";
+import { ModalSheet } from "@/components/modal-sheet";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatarData, formatarEuros } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { apagarMeta, criarMeta } from "./actions";
+import { apagarMeta } from "./actions";
 
 const MENSAGENS_ERRO: Record<string, string> = {
   dados: "Preenche o nome e um valor alvo válido.",
@@ -24,9 +19,9 @@ const MENSAGENS_ERRO: Record<string, string> = {
 export default async function MetasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string }>;
+  searchParams: Promise<{ erro?: string; form?: string }>;
 }) {
-  const { erro } = await searchParams;
+  const { erro, form } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: metas }, { data: contas }] = await Promise.all([
@@ -62,46 +57,14 @@ export default async function MetasPage({
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Nova meta</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={criarMeta} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input id="name" name="name" placeholder="Portátil novo" required />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="target_amount">Valor (€)</Label>
-                <Input
-                  id="target_amount"
-                  name="target_amount"
-                  type="number"
-                  step="0.01"
-                  min="1"
-                  placeholder="1000"
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="target_date">Data alvo (opcional)</Label>
-                <Input id="target_date" name="target_date" type="date" />
-              </div>
-            </div>
-            <BotaoSubmit size="sm" pendingText="A criar…">
-              Criar meta
-            </BotaoSubmit>
-          </form>
-        </CardContent>
-      </Card>
-
       {(metas ?? []).length === 0 && (
-        <p className="py-4 text-center text-sm text-muted-foreground">
-          Sem metas ainda. Cria a primeira para acompanhares o progresso no
-          dashboard.
-        </p>
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border p-8 text-center">
+          <p className="text-sm font-medium">Sem metas ainda</p>
+          <p className="text-xs text-muted-foreground">
+            Toca no + para criares a primeira e acompanhares o progresso no
+            dashboard.
+          </p>
+        </div>
       )}
 
       {(metas ?? []).map((meta) => {
@@ -131,6 +94,23 @@ export default async function MetasPage({
           </Card>
         );
       })}
+
+      <Link
+        href="/definicoes/metas?form=meta"
+        scroll={false}
+        aria-label="Nova meta"
+        className="fixed bottom-24 right-4 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95"
+      >
+        <Plus className="size-6" strokeWidth={2.5} />
+      </Link>
+
+      <ModalSheet
+        aberto={form === "meta"}
+        titulo="Nova meta"
+        voltarUrl="/definicoes/metas"
+      >
+        <FormularioMeta />
+      </ModalSheet>
     </div>
   );
 }

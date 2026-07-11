@@ -34,6 +34,7 @@ import {
   topGastosDoMes,
   type TransacaoDash,
 } from "@/lib/dashboard";
+import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { diasAte, formatarEuros } from "@/lib/format";
 import { resolverNome } from "@/lib/nomes-comerciantes";
 import {
@@ -99,6 +100,7 @@ export default async function DashboardPage() {
     { data: metas },
     { data: nomesRaw },
     { data: orcamentosRaw },
+    overrides,
   ] = await Promise.all([
     supabase.from("accounts").select("balance"),
     supabase
@@ -121,6 +123,7 @@ export default async function DashboardPage() {
     supabase
       .from("budgets")
       .select("id, category_id, amount, period, categories (name, color, icon)"),
+    carregarCoresOverride(supabase),
   ]);
 
   if (!contas || contas.length === 0) {
@@ -150,7 +153,7 @@ export default async function DashboardPage() {
     booking_date: t.booking_date,
     amount: Number(t.amount),
     categoria: t.categories?.name ?? null,
-    cor: t.categories?.color ?? null,
+    cor: corCategoria(overrides, t.category_id, t.categories?.color),
     icone: t.categories?.icon ?? null,
     descricao: t.description,
     contraparte: t.counterparty,

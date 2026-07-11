@@ -11,11 +11,17 @@ import { Button } from "@/components/ui/button";
 export function BotaoSubmit({
   children,
   pendingText,
+  disabled,
   ...props
 }: React.ComponentProps<typeof Button> & { pendingText?: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} aria-busy={pending} {...props}>
+    <Button
+      type="submit"
+      disabled={pending || disabled}
+      aria-busy={pending}
+      {...props}
+    >
       {pending ? (
         <>
           <Loader2 className="size-4 animate-spin" />

@@ -21,36 +21,44 @@ const items = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const activeIndex = items.findIndex((it) =>
+    it.href === "/" ? pathname === "/" : pathname.startsWith(it.href)
+  );
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg">
-      <div className="mx-auto grid max-w-lg grid-cols-5">
-        {items.map(({ href, label, icon: Icon }) => {
-          const active =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/50 bg-background/60 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl">
+      <div className="relative mx-auto grid max-w-lg grid-cols-5">
+        {/* indicador "glass" que desliza para o separador ativo */}
+        {activeIndex >= 0 && (
+          <div
+            className="pointer-events-none absolute top-1.5 left-0 h-10 w-1/5 px-3 transition-transform duration-[350ms] ease-[cubic-bezier(0.34,1.3,0.64,1)]"
+            style={{ transform: `translateX(${activeIndex * 100}%)` }}
+          >
+            <div className="h-full w-full rounded-2xl bg-primary/12 ring-1 ring-inset ring-primary/25 shadow-sm shadow-primary/10 backdrop-blur" />
+          </div>
+        )}
+        {items.map(({ href, label, icon: Icon }, i) => {
+          const active = i === activeIndex;
           return (
             <Link
               key={href}
               href={href}
+              aria-label={label}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+                "relative z-10 flex items-center justify-center py-3.5 transition-colors duration-200",
                 active
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <span
+              <Icon
                 className={cn(
-                  "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
-                  active && "bg-primary/12"
+                  "size-[22px] transition-transform duration-300",
+                  active && "-translate-y-0.5 scale-110"
                 )}
-              >
-                <Icon
-                  className="size-5"
-                  strokeWidth={active ? 2.4 : 2}
-                />
-              </span>
-              {label}
+                strokeWidth={active ? 2.5 : 2}
+              />
             </Link>
           );
         })}

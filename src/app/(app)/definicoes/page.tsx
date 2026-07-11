@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, ListChecks, PiggyBank, Tags } from "lucide-react";
 import { AtivarNotificacoes } from "@/components/ativar-notificacoes";
+import { SeletorTema } from "@/components/seletor-tema";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
@@ -38,6 +39,13 @@ export default async function DefinicoesPage() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       <h1 className="text-2xl font-bold">Definições</h1>
+
+      <div className="flex flex-col gap-2">
+        <h2 className="px-1 text-sm font-semibold text-muted-foreground">
+          Aparência
+        </h2>
+        <SeletorTema />
+      </div>
 
       <AtivarNotificacoes />
 

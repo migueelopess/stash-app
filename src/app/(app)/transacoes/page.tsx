@@ -5,6 +5,7 @@ import { FiltrosTransacoes } from "@/components/filtros-transacoes";
 import { IconeCategoria } from "@/components/icone-categoria";
 import { PesquisaTransacoes } from "@/components/pesquisa-transacoes";
 import { Button } from "@/components/ui/button";
+import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { formatarEuros } from "@/lib/format";
 import {
   palavrasChaveParaPesquisa,
@@ -48,6 +49,7 @@ interface Transacao {
   amount: string;
   description: string | null;
   counterparty: string | null;
+  category_id: string | null;
   categories: {
     name: string;
     color: string | null;
@@ -78,10 +80,11 @@ export default async function TransacoesPage({
   const limite = Math.max(Number(filtros.n) || POR_PAGINA, POR_PAGINA);
   const supabase = await createClient();
 
-  // Nomes personalizados do utilizador (para mostrar e para pesquisar)
-  const { data: nomesRaw } = await supabase
-    .from("merchant_names")
-    .select("match_value, display_name");
+  // Nomes e cores personalizados do utilizador
+  const [{ data: nomesRaw }, overrides] = await Promise.all([
+    supabase.from("merchant_names").select("match_value, display_name"),
+    carregarCoresOverride(supabase),
+  ]);
   const nomes = new Map(
     (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
   );
@@ -89,7 +92,7 @@ export default async function TransacoesPage({
   let query = supabase
     .from("transactions")
     .select(
-      "id, booking_date, amount, description, counterparty, categories (name, color, icon)"
+      "id, booking_date, amount, description, counterparty, category_id, categories (name, color, icon)"
     )
     .order("booking_date", { ascending: false })
     .order("created_at", { ascending: false })
@@ -278,7 +281,7 @@ export default async function TransacoesPage({
                   >
                     <IconeCategoria
                       icone={t.categories?.icon}
-                      cor={t.categories?.color}
+                      cor={corCategoria(overrides, t.category_id, t.categories?.color)}
                       ganho={valor > 0}
                     />
                     <div className="min-w-0 flex-1">

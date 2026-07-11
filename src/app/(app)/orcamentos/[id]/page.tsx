@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
 import { BotaoSubmit } from "@/components/botao-submit";
+import { Segmentado } from "@/components/form/segmentado";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,8 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatarEuros } from "@/lib/format";
 import {
   CORES_NIVEL,
@@ -132,37 +131,47 @@ export default async function OrcamentoPage({
           <CardTitle className="text-sm">Editar</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={atualizarOrcamento} className="flex flex-col gap-3">
+          <form action={atualizarOrcamento} className="flex flex-col gap-4">
             <input type="hidden" name="orcamento_id" value={orcamento.id} />
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="amount">Limite (€)</Label>
-                <Input
+            <div className="flex flex-col gap-2">
+              <label htmlFor="amount" className="text-sm font-medium text-muted-foreground">
+                Limite
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold text-muted-foreground">
+                  €
+                </span>
+                <input
                   id="amount"
                   name="amount"
                   type="number"
                   step="0.01"
                   min="1"
+                  inputMode="decimal"
                   defaultValue={Number(orcamento.amount)}
                   required
-                  className="h-10 rounded-xl border-border/60 bg-card shadow-sm"
+                  className="h-12 w-full rounded-2xl border border-border/60 bg-background pl-9 pr-4 text-lg font-semibold shadow-sm outline-none focus:border-ring"
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="period">Período</Label>
-                <select
-                  id="period"
-                  name="period"
-                  defaultValue={orcamento.period}
-                  className="h-10 rounded-xl border border-border/60 bg-card px-3 text-sm shadow-sm"
-                >
-                  <option value="weekly">Semanal</option>
-                  <option value="monthly">Mensal</option>
-                  <option value="yearly">Anual</option>
-                </select>
-              </div>
             </div>
-            <BotaoSubmit size="sm" pendingText="A guardar…">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-muted-foreground">
+                Período
+              </label>
+              <Segmentado
+                name="period"
+                valorInicial={orcamento.period}
+                opcoes={[
+                  { valor: "weekly", rotulo: "Semanal" },
+                  { valor: "monthly", rotulo: "Mensal" },
+                  { valor: "yearly", rotulo: "Anual" },
+                ]}
+              />
+            </div>
+            <BotaoSubmit
+              className="h-12 w-full rounded-2xl text-base"
+              pendingText="A guardar…"
+            >
               Guardar
             </BotaoSubmit>
           </form>
