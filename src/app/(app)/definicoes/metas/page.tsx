@@ -99,7 +99,7 @@ export default async function MetasPage({
         href="/definicoes/metas?form=meta"
         scroll={false}
         aria-label="Nova meta"
-        className="fixed bottom-24 right-4 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95"
+        className="fixed bottom-28 right-4 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95"
       >
         <Plus className="size-6" strokeWidth={2.5} />
       </Link>
