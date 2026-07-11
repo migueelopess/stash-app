@@ -131,12 +131,22 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Selects: foco discreto (borda + anel suave) em vez do outline nativo */
+  /* Sem outline/anel nativo ao focar campos e botões */
+  input:focus,
+  input:focus-visible,
+  textarea:focus,
+  textarea:focus-visible,
+  select:focus,
+  select:focus-visible,
+  button:focus,
+  button:focus-visible,
+  a:focus,
+  a:focus-visible {
+    outline: none;
+  }
   select:focus,
   select:focus-visible {
-    outline: none;
     border-color: var(--ring);
-    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 25%, transparent);
   }
   /* Recharts: sem outline de foco ao clicar/tocar nos gráficos */
   .recharts-wrapper,
@@ -152,5 +162,15 @@
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* iOS: campos com <16px provocam zoom automático ao focar. Forçar 16px
+   em mobile (fora de @layer para vencer as utilities do Tailwind). */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
   }
 }

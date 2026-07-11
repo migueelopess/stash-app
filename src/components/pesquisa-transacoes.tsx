@@ -42,7 +42,7 @@ export function PesquisaTransacoes() {
         onChange={(e) => aoEscrever(e.target.value)}
         placeholder="Pesquisar transações…"
         aria-label="Pesquisar transações"
-        className="h-10 w-full rounded-full border border-border/60 bg-card pl-10 pr-9 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring [&::-webkit-search-cancel-button]:hidden"
+        className="h-10 w-full appearance-none rounded-full border border-border/60 bg-card pl-10 pr-9 text-sm shadow-sm outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
       />
       {texto && (
         <button
