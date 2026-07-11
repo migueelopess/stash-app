@@ -38,7 +38,7 @@ export const viewport: Viewport = {
 // Tema: preferência guardada (sistema/claro/escuro); corre antes da
 // hidratação para evitar flash. Exposto em window.__aplicarTema para o
 // seletor nas Definições reaplicar de imediato.
-const scriptTema = `(function(){var m=window.matchMedia("(prefers-color-scheme: dark)");function pref(){try{return localStorage.getItem("tema")||"sistema"}catch(e){return "sistema"}}function aplicar(){var p=pref();var escuro=p==="escuro"||(p==="sistema"&&m.matches);document.documentElement.classList.toggle("dark",escuro)}aplicar();m.addEventListener("change",aplicar);window.__aplicarTema=aplicar})();`;
+const scriptTema = `(function(){var m=window.matchMedia("(prefers-color-scheme: dark)");function pref(){try{return localStorage.getItem("tema")||"sistema"}catch(e){return "sistema"}}function aplicar(){var p=pref();var escuro=p==="escuro"||(p==="sistema"&&m.matches);document.documentElement.classList.toggle("dark",escuro)}aplicar();var t;m.addEventListener("change",function(){clearTimeout(t);t=setTimeout(aplicar,150)});window.__aplicarTema=aplicar})();`;
 
 export default function RootLayout({
   children,
