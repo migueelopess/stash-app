@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  BadgeCheck,
   EyeOff,
   Plus,
   Repeat,
@@ -45,6 +46,7 @@ interface ItemFixo {
   proximaData: string | null;
   deltaPreco: number | null;
   mensalEquivalente: number;
+  confirmada: boolean;
 }
 
 interface Linha {
@@ -71,6 +73,7 @@ export default async function RecorrenciasPage({
     { data: transacoesRaw },
     { data: nomesRaw },
     { data: exclusoesRaw },
+    { data: confirmacoesRaw },
     { data: manualRaw },
     { data: categoriasRaw },
     overrides,
@@ -84,6 +87,7 @@ export default async function RecorrenciasPage({
       .gte("booking_date", inicio.toISOString().slice(0, 10)),
     supabase.from("merchant_names").select("match_value, display_name"),
     supabase.from("recurring_exclusions").select("chave"),
+    supabase.from("recurring_confirmations").select("chave"),
     supabase
       .from("recurring_manual")
       .select("id, name, amount, cadence, category_id, next_date"),
@@ -99,6 +103,9 @@ export default async function RecorrenciasPage({
     (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
   );
   const excluidas = new Set((exclusoesRaw ?? []).map((e) => e.chave as string));
+  const confirmadas = new Set(
+    (confirmacoesRaw ?? []).map((e) => e.chave as string)
+  );
   const categorias = (categoriasRaw ?? []) as {
     id: string;
     name: string;
@@ -125,7 +132,7 @@ export default async function RecorrenciasPage({
     })
     .filter((t): t is TxRecorrencia => t !== null);
 
-  const recorrencias = detetarRecorrencias(txs, excluidas);
+  const recorrencias = detetarRecorrencias(txs, excluidas, confirmadas);
   const inativas = recorrencias.filter((r) => !r.ativa);
 
   const fixosAuto: ItemFixo[] = recorrencias
@@ -142,6 +149,7 @@ export default async function RecorrenciasPage({
       proximaData: r.proximaData,
       deltaPreco: r.deltaPreco,
       mensalEquivalente: r.mensalEquivalente,
+      confirmada: r.confirmada,
     }));
 
   const manual = (manualRaw ?? []) as {
@@ -165,6 +173,7 @@ export default async function RecorrenciasPage({
       proximaData: m.next_date,
       deltaPreco: null,
       mensalEquivalente: mensalEquivalenteDe(m.cadence, Number(m.amount)),
+      confirmada: false,
     };
   });
 
@@ -233,7 +242,12 @@ export default async function RecorrenciasPage({
               <>
                 <IconeCategoria icone={r.icone} cor={r.cor} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{r.nome}</p>
+                  <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
+                    {r.nome}
+                    {r.confirmada && (
+                      <BadgeCheck className="size-3.5 shrink-0 text-primary" />
+                    )}
+                  </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {ROTULO_CADENCIA[r.cadencia]}
                     {r.proximaData

@@ -17,9 +17,40 @@ export async function excluirRecorrencia(formData: FormData) {
   await supabase
     .from("recurring_exclusions")
     .upsert({ user_id: user.id, chave }, { onConflict: "user_id,chave" });
+  // Esconder e confirmar são opostos — nunca coexistem
+  await supabase
+    .from("recurring_confirmations")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("chave", chave);
 
   revalidatePath("/", "layout");
   redirect("/recorrencias");
+}
+
+export async function confirmarRecorrencia(formData: FormData) {
+  const chave = ((formData.get("chave") as string) ?? "").trim();
+  const voltar = (formData.get("voltar") as string) || "/recorrencias";
+  if (!chave) redirect("/recorrencias");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("recurring_confirmations")
+    .upsert({ user_id: user.id, chave }, { onConflict: "user_id,chave" });
+  // Confirmar remove qualquer exclusão anterior
+  await supabase
+    .from("recurring_exclusions")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("chave", chave);
+
+  revalidatePath("/", "layout");
+  redirect(voltar);
 }
 
 export async function restaurarRecorrencia(formData: FormData) {

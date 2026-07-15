@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronRight, HandCoins, Sparkles, Store } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  HandCoins,
+  Repeat,
+  Sparkles,
+  Store,
+} from "lucide-react";
 import { BotaoSubmit } from "@/components/botao-submit";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { extrairPalavraChave } from "@/lib/categorizacao";
 import { formatarData, formatarEuros } from "@/lib/format";
-import { resolverNome } from "@/lib/nomes-comerciantes";
+import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+import { confirmarRecorrencia } from "../../recorrencias/actions";
 import { categorizarTransacao } from "./actions";
 
 interface Detalhe {
@@ -55,14 +63,24 @@ export default async function TransacaoPage({
   const transacao = data as unknown as Detalhe;
 
   const valor = Number(transacao.amount);
-  const [{ data: categorias }, { data: nomesRaw }] = await Promise.all([
-    supabase
-      .from("categories")
-      .select("id, name, kind")
-      .eq("kind", valor > 0 ? "income" : "expense")
-      .order("name"),
-    supabase.from("merchant_names").select("match_value, display_name"),
-  ]);
+  const chaveFixo = chaveDoNome(transacao.description, transacao.counterparty);
+  const [{ data: categorias }, { data: nomesRaw }, { data: confirmacao }] =
+    await Promise.all([
+      supabase
+        .from("categories")
+        .select("id, name, kind")
+        .eq("kind", valor > 0 ? "income" : "expense")
+        .order("name"),
+      supabase.from("merchant_names").select("match_value, display_name"),
+      chaveFixo
+        ? supabase
+            .from("recurring_confirmations")
+            .select("chave")
+            .eq("chave", chaveFixo)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+  const jaFixo = Boolean(confirmacao);
 
   const nomes = new Map(
     (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
@@ -158,6 +176,37 @@ export default async function TransacaoPage({
         </span>
         <ChevronRight className="size-4 text-muted-foreground" />
       </Link>
+
+      {valor < 0 && chaveFixo && (
+        <form action={confirmarRecorrencia}>
+          <input type="hidden" name="chave" value={chaveFixo} />
+          <input type="hidden" name="voltar" value={`/transacoes/${transacao.id}`} />
+          {jaFixo ? (
+            <Link
+              href="/recorrencias"
+              className="flex items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm shadow-sm transition-colors hover:bg-primary/10 active:scale-[0.99]"
+            >
+              <span className="flex items-center gap-2 font-medium text-primary">
+                <Repeat className="size-4" />
+                Já é um gasto fixo · ver
+              </span>
+              <ChevronRight className="size-4 text-primary/70" />
+            </Link>
+          ) : (
+            <BotaoSubmit
+              variant="outline"
+              className="h-auto w-full justify-between gap-2 rounded-xl border-border/60 bg-card p-3 text-sm font-medium shadow-sm hover:bg-muted/50"
+              pendingText="A marcar…"
+            >
+              <span className="flex items-center gap-2">
+                <Repeat className="size-4 text-muted-foreground" />
+                Marcar como gasto fixo
+              </span>
+              <ChevronRight className="size-4 text-muted-foreground" />
+            </BotaoSubmit>
+          )}
+        </form>
+      )}
 
       <form action={categorizarTransacao} className="flex flex-col gap-4">
         <input type="hidden" name="transacao_id" value={transacao.id} />

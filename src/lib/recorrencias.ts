@@ -27,6 +27,7 @@ export interface Recorrencia {
   proximaData: string;
   ocorrencias: number;
   ativa: boolean;
+  confirmada: boolean; // marcada à mão pelo utilizador
   deltaPreco: number | null; // variação face à cobrança anterior
   mensalEquivalente: number;
 }
@@ -81,6 +82,7 @@ function coefVariacao(nums: number[]): number {
 export function detetarRecorrencias(
   transacoes: TxRecorrencia[],
   chavesExcluidas: Set<string> = new Set(),
+  chavesConfirmadas: Set<string> = new Set(),
   agora = new Date()
 ): Recorrencia[] {
   const grupos = new Map<string, TxRecorrencia[]>();
@@ -95,43 +97,61 @@ export function detetarRecorrencias(
   const resultado: Recorrencia[] = [];
 
   for (const [chave, lista] of grupos) {
-    const categoria = lista[lista.length - 1].categoria;
-    if (categoria && CATEGORIAS_NUNCA_FIXAS.has(categoria)) continue;
+    // Confirmada à mão pelo utilizador: entra sempre, saltando os filtros —
+    // a app apenas deriva valor/cadência do histórico real.
+    const confirmada = chavesConfirmadas.has(chave);
 
-    const eSubscricao = categoria === "Subscrições";
-    const minOcorr = eSubscricao ? 2 : 3;
-    if (lista.length < minOcorr) continue;
+    const categoria = lista[lista.length - 1].categoria;
+    if (!confirmada && categoria && CATEGORIAS_NUNCA_FIXAS.has(categoria))
+      continue;
 
     const ordenadas = [...lista].sort((a, b) =>
       a.booking_date < b.booking_date ? -1 : 1
     );
+
+    // Valor quase idêntico — o filtro-chave contra idas ao BK/McDonald's.
+    // Amostra estável (≤6% de variação) = comporta-se como subscrição.
+    const valores = ordenadas.map((t) => Math.abs(t.amount));
+    const valMediano = mediana(valores);
+    if (valMediano <= 0) continue;
+    const cvValores = coefVariacao(valores);
+
+    const eSubscricao = categoria === "Subscrições" || cvValores <= 0.06;
+    const minOcorr = eSubscricao ? 2 : 3;
+    if (!confirmada && lista.length < minOcorr) continue;
 
     const datas = ordenadas.map((t) => new Date(t.booking_date).getTime());
     const gaps: number[] = [];
     for (let i = 1; i < datas.length; i++) {
       gaps.push((datas[i] - datas[i - 1]) / DIA_MS);
     }
-    const gapMediano = mediana(gaps);
-    const cadencia = classificarCadencia(gapMediano);
-    if (!cadencia) continue;
+    // Sem histórico suficiente para inferir cadência: assume mensal
+    // (só acontece em confirmadas com uma única cobrança).
+    const gapMediano = gaps.length ? mediana(gaps) : 30;
+    let cadencia = classificarCadencia(gapMediano);
 
-    // Intervalos regulares (subscrição cai ~no mesmo dia; restaurante não)
-    if (gaps.length >= 2) {
-      const limiteGap = eSubscricao ? 0.6 : 0.4;
-      if (coefVariacao(gaps) > limiteGap) continue;
+    if (!confirmada) {
+      if (!cadencia) continue;
+
+      // Intervalos regulares (subscrição cai ~no mesmo dia; restaurante não)
+      if (gaps.length >= 2) {
+        const limiteGap = eSubscricao ? 0.6 : 0.4;
+        if (coefVariacao(gaps) > limiteGap) continue;
+      }
+
+      const limiteValor = eSubscricao ? 0.4 : 0.15;
+      if (cvValores > limiteValor) continue;
+    } else {
+      cadencia = cadencia ?? "monthly";
     }
-
-    // Valor quase idêntico — o filtro-chave contra idas ao BK/McDonald's
-    const valores = ordenadas.map((t) => Math.abs(t.amount));
-    const valMediano = mediana(valores);
-    if (valMediano <= 0) continue;
-    const limiteValor = eSubscricao ? 0.4 : 0.15;
-    if (coefVariacao(valores) > limiteValor) continue;
 
     const ultima = ordenadas[ordenadas.length - 1];
     const ultimaMs = datas[datas.length - 1];
-    const proximaMs = ultimaMs + gapMediano * DIA_MS;
-    const ativa = agora.getTime() - ultimaMs < gapMediano * DIA_MS * 1.6;
+    const passo = classificarCadencia(gapMediano) ? gapMediano : 30;
+    const proximaMs = ultimaMs + passo * DIA_MS;
+    // Confirmada pelo utilizador está sempre ativa
+    const ativa =
+      confirmada || agora.getTime() - ultimaMs < gapMediano * DIA_MS * 1.6;
 
     const penultimo = valores[valores.length - 2];
     const ultimoVal = valores[valores.length - 1];
@@ -154,6 +174,7 @@ export function detetarRecorrencias(
       proximaData: new Date(proximaMs).toISOString().slice(0, 10),
       ocorrencias: ordenadas.length,
       ativa,
+      confirmada,
       deltaPreco,
       mensalEquivalente:
         Math.round(valMediano * FATOR_MENSAL[cadencia] * 100) / 100,

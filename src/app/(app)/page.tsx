@@ -109,6 +109,7 @@ export default async function DashboardPage() {
     { data: orcamentosRaw },
     { data: dividasRaw },
     { data: exclusoesRecRaw },
+    { data: confirmacoesRecRaw },
     { data: manualRecRaw },
     overrides,
   ] = await Promise.all([
@@ -135,12 +136,16 @@ export default async function DashboardPage() {
       .select("id, category_id, amount, period, categories (name, color, icon)"),
     supabase.from("debts").select("direction, amount").eq("settled", false),
     supabase.from("recurring_exclusions").select("chave"),
+    supabase.from("recurring_confirmations").select("chave"),
     supabase.from("recurring_manual").select("amount, cadence"),
     carregarCoresOverride(supabase),
   ]);
 
   const excluidasRec = new Set(
     (exclusoesRecRaw ?? []).map((e) => e.chave as string)
+  );
+  const confirmadasRec = new Set(
+    (confirmacoesRecRaw ?? []).map((e) => e.chave as string)
   );
 
   const dividas = (dividasRaw ?? []) as {
@@ -245,7 +250,8 @@ export default async function DashboardPage() {
     .filter((t): t is TxRecorrencia => t !== null);
   const recorrenciasAtivas = detetarRecorrencias(
     txsRecorrencia,
-    excluidasRec
+    excluidasRec,
+    confirmadasRec
   ).filter((r) => r.ativa);
   const manualRec = (manualRecRaw ?? []) as {
     amount: string;
