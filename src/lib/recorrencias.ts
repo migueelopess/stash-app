@@ -52,6 +52,11 @@ const FATOR_MENSAL: Record<Cadencia, number> = {
   yearly: 1 / 12,
 };
 
+/** Valor mensal equivalente de um gasto fixo (para o total). */
+export function mensalEquivalenteDe(cadencia: Cadencia, valor: number): number {
+  return Math.round(valor * FATOR_MENSAL[cadencia] * 100) / 100;
+}
+
 // Transferências (MB Way, etc.) nunca são gastos fixos — variam por mil razões
 const CATEGORIAS_NUNCA_FIXAS = new Set([
   "Transferências",

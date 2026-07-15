@@ -39,7 +39,11 @@ import {
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { diasAte, formatarEuros } from "@/lib/format";
 import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
-import { detetarRecorrencias, type TxRecorrencia } from "@/lib/recorrencias";
+import {
+  detetarRecorrencias,
+  mensalEquivalenteDe,
+  type TxRecorrencia,
+} from "@/lib/recorrencias";
 import {
   CORES_NIVEL,
   estadoDoOrcamento,
@@ -105,6 +109,7 @@ export default async function DashboardPage() {
     { data: orcamentosRaw },
     { data: dividasRaw },
     { data: exclusoesRecRaw },
+    { data: manualRecRaw },
     overrides,
   ] = await Promise.all([
     supabase.from("accounts").select("balance"),
@@ -130,6 +135,7 @@ export default async function DashboardPage() {
       .select("id, category_id, amount, period, categories (name, color, icon)"),
     supabase.from("debts").select("direction, amount").eq("settled", false),
     supabase.from("recurring_exclusions").select("chave"),
+    supabase.from("recurring_manual").select("amount, cadence"),
     carregarCoresOverride(supabase),
   ]);
 
@@ -241,10 +247,17 @@ export default async function DashboardPage() {
     txsRecorrencia,
     excluidasRec
   ).filter((r) => r.ativa);
-  const totalFixoMensal = recorrenciasAtivas.reduce(
-    (s, r) => s + r.mensalEquivalente,
-    0
-  );
+  const manualRec = (manualRecRaw ?? []) as {
+    amount: string;
+    cadence: "weekly" | "monthly" | "yearly";
+  }[];
+  const nFixos = recorrenciasAtivas.length + manualRec.length;
+  const totalFixoMensal =
+    recorrenciasAtivas.reduce((s, r) => s + r.mensalEquivalente, 0) +
+    manualRec.reduce(
+      (s, m) => s + mensalEquivalenteDe(m.cadence, Number(m.amount)),
+      0
+    );
 
   const aRenovar = (ligacoes ?? []).filter(
     (ligacao) => diasAte(ligacao.valid_until) <= 14
@@ -470,11 +483,8 @@ export default async function DashboardPage() {
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold">Gastos fixos</span>
             <span className="block text-xs text-muted-foreground">
-              {recorrenciasAtivas.length}{" "}
-              {recorrenciasAtivas.length === 1
-                ? "recorrência"
-                : "recorrências"}{" "}
-              · {formatarEuros(totalFixoMensal)}/mês
+              {nFixos} {nFixos === 1 ? "recorrência" : "recorrências"} ·{" "}
+              {formatarEuros(totalFixoMensal)}/mês
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
