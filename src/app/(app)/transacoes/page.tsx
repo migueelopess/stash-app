@@ -50,6 +50,7 @@ interface Transacao {
   description: string | null;
   counterparty: string | null;
   category_id: string | null;
+  is_movement: boolean;
   categories: {
     name: string;
     color: string | null;
@@ -92,7 +93,7 @@ export default async function TransacoesPage({
   let query = supabase
     .from("transactions")
     .select(
-      "id, booking_date, amount, description, counterparty, category_id, categories (name, color, icon)"
+      "id, booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
     )
     .order("booking_date", { ascending: false })
     .order("created_at", { ascending: false })
@@ -106,8 +107,11 @@ export default async function TransacoesPage({
       .gte("booking_date", inicio)
       .lt("booking_date", fim.toISOString().slice(0, 10));
   }
-  if (filtros.tipo === "ganhos") query = query.gt("amount", 0);
-  if (filtros.tipo === "gastos") query = query.lt("amount", 0);
+  if (filtros.tipo === "ganhos")
+    query = query.gt("amount", 0).eq("is_movement", false);
+  if (filtros.tipo === "gastos")
+    query = query.lt("amount", 0).eq("is_movement", false);
+  if (filtros.tipo === "movimentos") query = query.eq("is_movement", true);
   if (filtros.conta) query = query.eq("account_id", filtros.conta);
 
   // Pesquisa: texto cru + palavras-chave cujo nome bonito corresponde
@@ -270,6 +274,7 @@ export default async function TransacoesPage({
             <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
               {linhas.map((t, i) => {
                 const valor = Number(t.amount);
+                const movimento = t.is_movement;
                 return (
                   <Link
                     key={t.id}
@@ -283,22 +288,27 @@ export default async function TransacoesPage({
                       icone={t.categories?.icon}
                       cor={corCategoria(overrides, t.category_id, t.categories?.color)}
                       ganho={valor > 0}
+                      movimento={movimento}
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
                         {resolverNome(t.description, t.counterparty, nomes)}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {t.categories?.name ?? "Por categorizar"}
+                        {movimento
+                          ? "Movimento"
+                          : t.categories?.name ?? "Por categorizar"}
                       </p>
                     </div>
                     <p
                       className={cn(
                         "shrink-0 text-sm font-semibold tabular-nums",
-                        valor > 0 && "text-emerald-600 dark:text-emerald-400"
+                        movimento
+                          ? "text-muted-foreground"
+                          : valor > 0 && "text-emerald-600 dark:text-emerald-400"
                       )}
                     >
-                      {valor > 0 ? "+" : ""}
+                      {!movimento && valor > 0 ? "+" : ""}
                       {formatarEuros(t.amount)}
                     </p>
                   </Link>

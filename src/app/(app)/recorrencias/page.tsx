@@ -84,6 +84,7 @@ export default async function RecorrenciasPage({
         "booking_date, amount, description, counterparty, category_id, categories (name, color, icon)"
       )
       .lt("amount", 0)
+      .eq("is_movement", false)
       .gte("booking_date", inicio.toISOString().slice(0, 10)),
     supabase.from("merchant_names").select("match_value, display_name"),
     supabase.from("recurring_exclusions").select("chave"),

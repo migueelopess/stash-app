@@ -70,6 +70,7 @@ export default async function OrcamentosPage({
       .from("transactions")
       .select("booking_date, amount, category_id")
       .lt("amount", 0)
+      .eq("is_movement", false)
       .gte("booking_date", inicioAno),
     supabase
       .from("categories")

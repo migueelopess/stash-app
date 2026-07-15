@@ -72,6 +72,7 @@ export function FiltrosTransacoes({
         <option value="">Ganhos e gastos</option>
         <option value="ganhos">Só ganhos</option>
         <option value="gastos">Só gastos</option>
+        <option value="movimentos">Só movimentos</option>
       </select>
       {contas.length > 1 && (
         <select

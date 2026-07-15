@@ -72,3 +72,32 @@ export async function categorizarTransacao(formData: FormData) {
   revalidatePath("/", "layout");
   redirect("/transacoes?categorizada=1");
 }
+
+/**
+ * Marca/desmarca uma transação como "movimento" — dinheiro que vai e volta
+ * (reembolso, transferência entre contas próprias). Movimentos não contam
+ * como gasto nem ganho nas estatísticas, mas continuam no saldo.
+ */
+export async function alternarMovimento(formData: FormData) {
+  const transacaoId = formData.get("transacao_id") as string;
+  const movimento = formData.get("movimento") === "true";
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { error } = await supabase
+    .from("transactions")
+    .update({ is_movement: movimento })
+    .eq("id", transacaoId);
+
+  if (error) {
+    console.error("Erro ao marcar movimento:", error);
+    redirect(`/transacoes/${transacaoId}?erro=guardar`);
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/transacoes/${transacaoId}`);
+}

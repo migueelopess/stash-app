@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
+  ArrowLeftRight,
   ChevronRight,
   HandCoins,
   Repeat,
@@ -24,7 +25,7 @@ import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { confirmarRecorrencia } from "../../recorrencias/actions";
-import { categorizarTransacao } from "./actions";
+import { alternarMovimento, categorizarTransacao } from "./actions";
 
 interface Detalhe {
   id: string;
@@ -35,6 +36,7 @@ interface Detalhe {
   counterparty: string | null;
   category_id: string | null;
   categorized_by: string;
+  is_movement: boolean;
   accounts: { name: string | null; iban: string | null } | null;
 }
 
@@ -52,7 +54,7 @@ export default async function TransacaoPage({
   const { data } = await supabase
     .from("transactions")
     .select(
-      "id, booking_date, amount, currency, description, counterparty, category_id, categorized_by, accounts (name, iban)"
+      "id, booking_date, amount, currency, description, counterparty, category_id, categorized_by, is_movement, accounts (name, iban)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -132,10 +134,12 @@ export default async function TransacaoPage({
             <span
               className={cn(
                 "tabular-nums",
-                valor > 0 && "text-emerald-600 dark:text-emerald-400"
+                transacao.is_movement
+                  ? "text-muted-foreground"
+                  : valor > 0 && "text-emerald-600 dark:text-emerald-400"
               )}
             >
-              {valor > 0 ? "+" : ""}
+              {!transacao.is_movement && valor > 0 ? "+" : ""}
               {formatarEuros(transacao.amount)}
             </span>
           </CardTitle>
@@ -146,6 +150,12 @@ export default async function TransacaoPage({
             {transacao.accounts?.name ? ` · ${transacao.accounts.name}` : ""}
           </p>
           {transacao.description && <p>{transacao.description}</p>}
+          {transacao.is_movement && (
+            <p className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-slate-500/15 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+              <ArrowLeftRight className="size-3.5" />
+              Movimento · não conta como gasto nem ganho
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -177,7 +187,7 @@ export default async function TransacaoPage({
         <ChevronRight className="size-4 text-muted-foreground" />
       </Link>
 
-      {valor < 0 && chaveFixo && (
+      {valor < 0 && chaveFixo && !transacao.is_movement && (
         <form action={confirmarRecorrencia}>
           <input type="hidden" name="chave" value={chaveFixo} />
           <input type="hidden" name="voltar" value={`/transacoes/${transacao.id}`} />
@@ -205,6 +215,49 @@ export default async function TransacaoPage({
               <ChevronRight className="size-4 text-muted-foreground" />
             </BotaoSubmit>
           )}
+        </form>
+      )}
+
+      {/* Marcar como movimento (não conta como gasto/ganho) */}
+      {transacao.is_movement ? (
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-500/30 bg-slate-500/8 p-3 text-sm shadow-sm">
+          <span className="flex items-center gap-2 font-medium text-slate-600 dark:text-slate-300">
+            <ArrowLeftRight className="size-4" />
+            É um movimento
+          </span>
+          <form action={alternarMovimento}>
+            <input type="hidden" name="transacao_id" value={transacao.id} />
+            <input type="hidden" name="movimento" value="false" />
+            <BotaoSubmit
+              variant="ghost"
+              size="sm"
+              className="h-8 text-muted-foreground"
+              pendingText="…"
+            >
+              Desfazer
+            </BotaoSubmit>
+          </form>
+        </div>
+      ) : (
+        <form action={alternarMovimento}>
+          <input type="hidden" name="transacao_id" value={transacao.id} />
+          <input type="hidden" name="movimento" value="true" />
+          <BotaoSubmit
+            variant="outline"
+            className="h-auto w-full justify-between gap-2 rounded-xl border-border/60 bg-card p-3 text-sm font-medium shadow-sm hover:bg-muted/50"
+            pendingText="A marcar…"
+          >
+            <span className="flex items-center gap-2">
+              <ArrowLeftRight className="size-4 text-muted-foreground" />
+              Marcar como movimento
+            </span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </BotaoSubmit>
+          <p className="mt-1.5 px-1 text-xs text-muted-foreground">
+            Para dinheiro que vai e volta — reembolsos ou transferências entre
+            as tuas contas. Deixa de contar como gasto ou ganho, mas continua no
+            teu saldo.
+          </p>
         </form>
       )}
 

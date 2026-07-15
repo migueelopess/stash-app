@@ -44,17 +44,22 @@ export function IconeCategoria({
   icone,
   cor,
   ganho,
+  movimento,
   className,
 }: {
   icone?: string | null;
   cor?: string | null;
   /** usado no fallback sem categoria: seta de entrada/saída */
   ganho?: boolean;
+  /** movimento: ícone e cor neutros (não é gasto nem ganho) */
+  movimento?: boolean;
   className?: string;
 }) {
-  const Icone = icone ? ICONES[icone] : undefined;
+  const Icone = movimento ? ArrowLeftRight : icone ? ICONES[icone] : undefined;
   const IconeFinal = Icone ?? (ganho ? ArrowDownLeft : ArrowUpRight);
-  const corFinal = cor ?? (Icone ? "#94a3b8" : ganho ? "#10b981" : "#94a3b8");
+  const corFinal = movimento
+    ? "#64748b"
+    : cor ?? (Icone ? "#94a3b8" : ganho ? "#10b981" : "#94a3b8");
 
   return (
     <span

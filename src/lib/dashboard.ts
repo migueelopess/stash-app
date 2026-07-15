@@ -9,6 +9,8 @@ export interface TransacaoDash {
   icone?: string | null;
   descricao?: string | null;
   contraparte?: string | null;
+  /** Movimento (reembolso/transferência): não conta como gasto nem ganho */
+  movimento?: boolean;
 }
 
 const formatoMesCurto = new Intl.DateTimeFormat("pt-PT", { month: "short" });
@@ -42,6 +44,7 @@ export function ganhosVsGastosPorMes(
 
   const porChave = new Map(meses.map((m) => [m.chave, m]));
   for (const t of transacoes) {
+    if (t.movimento) continue;
     const m = porChave.get(t.booking_date.slice(0, 7));
     if (!m) continue;
     if (t.amount > 0) m.ganhos += t.amount;
@@ -63,6 +66,7 @@ function somasPorCategoria(
   const grupos = new Map<string, { valor: number; cor: string }>();
 
   for (const t of transacoes) {
+    if (t.movimento) continue;
     if (t.amount * sinal <= 0 || t.booking_date.slice(0, 7) !== mesAtual) {
       continue;
     }
@@ -131,7 +135,9 @@ export function somaDoMesPorCategoria(
   return transacoes
     .filter(
       (t) =>
-        t.booking_date.slice(0, 7) === mesAtual && t.categoria === categoria
+        !t.movimento &&
+        t.booking_date.slice(0, 7) === mesAtual &&
+        t.categoria === categoria
     )
     .reduce((soma, t) => soma + t.amount, 0);
 }
@@ -144,7 +150,10 @@ export function topGastosDoMes(
   const mesAtual = chaveMes(new Date());
   return transacoes
     .filter(
-      (t) => t.amount < 0 && t.booking_date.slice(0, 7) === mesAtual
+      (t) =>
+        !t.movimento &&
+        t.amount < 0 &&
+        t.booking_date.slice(0, 7) === mesAtual
     )
     .sort((a, b) => a.amount - b.amount)
     .slice(0, n);
@@ -167,7 +176,7 @@ export function comparacaoComMesAnterior(transacoes: TransacaoDash[]): {
   let atual = 0;
   let anterior = 0;
   for (const t of transacoes) {
-    if (t.amount >= 0) continue;
+    if (t.movimento || t.amount >= 0) continue;
     const mes = t.booking_date.slice(0, 7);
     const dia = Number(t.booking_date.slice(8, 10));
     if (mes === mesAtual) atual += -t.amount;
@@ -189,7 +198,7 @@ export function resumoDoMes(transacoes: TransacaoDash[]): {
   let ganhos = 0;
   let gastos = 0;
   for (const t of transacoes) {
-    if (t.booking_date.slice(0, 7) !== mesAtual) continue;
+    if (t.movimento || t.booking_date.slice(0, 7) !== mesAtual) continue;
     if (t.amount > 0) ganhos += t.amount;
     else gastos += -t.amount;
   }

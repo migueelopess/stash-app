@@ -43,6 +43,7 @@ export async function verificarAlertasDeOrcamentos(
       .from("transactions")
       .select("booking_date, amount, category_id, accounts!inner(bank_connections!inner(user_id))")
       .lt("amount", 0)
+      .eq("is_movement", false)
       .gte("booking_date", inicioAno)
       .eq("accounts.bank_connections.user_id", userId);
 

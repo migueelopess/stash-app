@@ -78,6 +78,7 @@ interface LinhaTransacao {
   description: string | null;
   counterparty: string | null;
   category_id: string | null;
+  is_movement: boolean;
   categories: {
     name: string;
     color: string | null;
@@ -117,7 +118,7 @@ export default async function DashboardPage() {
     supabase
       .from("transactions")
       .select(
-        "id, booking_date, amount, description, counterparty, category_id, categories (name, color, icon)"
+        "id, booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
       )
       .gte("booking_date", inicioHistorico.toISOString().slice(0, 10))
       .order("booking_date"),
@@ -190,6 +191,7 @@ export default async function DashboardPage() {
     icone: t.categories?.icon ?? null,
     descricao: t.description,
     contraparte: t.counterparty,
+    movimento: t.is_movement,
   }));
 
   const nomes = new Map(
@@ -218,7 +220,7 @@ export default async function DashboardPage() {
   // Orçamentos mais apertados (para o cartão-resumo)
   const linhas = (transacoesRaw ?? []) as unknown as LinhaTransacao[];
   const transacoesOrcamento = linhas
-    .filter((t) => Number(t.amount) < 0)
+    .filter((t) => Number(t.amount) < 0 && !t.is_movement)
     .map((t) => ({
       booking_date: t.booking_date,
       amount: Number(t.amount),
@@ -234,6 +236,7 @@ export default async function DashboardPage() {
   // Gastos fixos / recorrências (para o cartão-resumo)
   const txsRecorrencia: TxRecorrencia[] = linhas
     .map((t): TxRecorrencia | null => {
+      if (t.is_movement) return null;
       const chave = chaveDoNome(t.description, t.counterparty);
       if (!chave) return null;
       return {

@@ -16,6 +16,7 @@ interface Linha {
   description: string | null;
   counterparty: string | null;
   category_id: string | null;
+  is_movement: boolean;
   categories: { name: string; color: string | null; icon: string | null } | null;
 }
 
@@ -39,7 +40,7 @@ export default async function ComerciantePage({
       supabase
         .from("transactions")
         .select(
-          "id, booking_date, amount, description, counterparty, category_id, categories (name, color, icon)"
+          "id, booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
         )
         .or(`description.ilike.*${seguro}*,counterparty.ilike.*${seguro}*`)
         .order("booking_date", { ascending: false })
@@ -67,7 +68,9 @@ export default async function ComerciantePage({
   const categoria = amostra?.categories?.name ?? "Por categorizar";
   const icone = amostra?.categories?.icon;
 
-  const gastos = transacoes.filter((t) => Number(t.amount) < 0);
+  const gastos = transacoes.filter(
+    (t) => Number(t.amount) < 0 && !t.is_movement
+  );
   const totalGasto = gastos.reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
   const nGastos = gastos.length;
   const ticketMedio = nGastos > 0 ? totalGasto / nGastos : 0;
