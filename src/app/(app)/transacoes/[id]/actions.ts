@@ -11,6 +11,9 @@ export async function categorizarTransacao(formData: FormData) {
   const categoriaId = (formData.get("category_id") as string) || null;
   const nome = ((formData.get("nome") as string) ?? "").trim();
   const nomePredefinido = ((formData.get("nome_predefinido") as string) ?? "").trim();
+  const nomeGlobal = ((formData.get("nome_global") as string) ?? "").trim();
+  // "Só esta transação": não aprende regra nem altera o nome do comerciante
+  const apenasEsta = formData.get("apenas_esta") === "on";
 
   const supabase = await createClient();
   const {
@@ -31,11 +34,37 @@ export async function categorizarTransacao(formData: FormData) {
     redirect("/transacoes");
   }
 
+  if (apenasEsta) {
+    // Exceção pontual: categoria + nome só nesta linha, sem aprender nada.
+    // O nome vive na própria transação (custom_name); só é guardado quando
+    // difere do nome global atual do comerciante.
+    const customName = nome && nome !== nomeGlobal ? nome : null;
+    const { error } = await supabase
+      .from("transactions")
+      .update({
+        category_id: categoriaId,
+        categorized_by: categoriaId ? "manual" : "none",
+        custom_name: customName,
+      })
+      .eq("id", transacaoId);
+
+    if (error) {
+      console.error("Erro ao guardar exceção da transação:", error);
+      redirect(`/transacoes/${transacaoId}?erro=guardar`);
+    }
+
+    revalidatePath("/", "layout");
+    redirect("/transacoes?categorizada=1");
+  }
+
+  // Comportamento normal: aprende para todas as transações do comerciante.
+  // Limpa qualquer exceção pontual anterior (o global volta a mandar).
   const { error } = await supabase
     .from("transactions")
     .update({
       category_id: categoriaId,
       categorized_by: categoriaId ? "manual" : "none",
+      custom_name: null,
     })
     .eq("id", transacaoId);
 

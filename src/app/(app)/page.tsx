@@ -79,6 +79,7 @@ interface LinhaTransacao {
   counterparty: string | null;
   category_id: string | null;
   is_movement: boolean;
+  custom_name: string | null;
   categories: {
     name: string;
     color: string | null;
@@ -118,7 +119,7 @@ export default async function DashboardPage() {
     supabase
       .from("transactions")
       .select(
-        "id, booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
+        "id, booking_date, amount, description, counterparty, category_id, is_movement, custom_name, categories (name, color, icon)"
       )
       .gte("booking_date", inicioHistorico.toISOString().slice(0, 10))
       .order("booking_date"),
@@ -191,6 +192,7 @@ export default async function DashboardPage() {
     icone: t.categories?.icon ?? null,
     descricao: t.description,
     contraparte: t.counterparty,
+    nomePersonalizado: t.custom_name,
     movimento: t.is_movement,
   }));
 
@@ -560,11 +562,12 @@ export default async function DashboardPage() {
                 <IconeCategoria icone={t.icone} cor={t.cor} ganho={false} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
-                    {resolverNome(
-                      t.descricao ?? null,
-                      t.contraparte ?? null,
-                      nomes
-                    )}
+                    {t.nomePersonalizado ??
+                      resolverNome(
+                        t.descricao ?? null,
+                        t.contraparte ?? null,
+                        nomes
+                      )}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {t.categoria ?? "Por categorizar"}

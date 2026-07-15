@@ -6,10 +6,10 @@ import {
   ChevronRight,
   HandCoins,
   Repeat,
-  Sparkles,
   Store,
 } from "lucide-react";
 import { BotaoSubmit } from "@/components/botao-submit";
+import { OpcaoAprendizagem } from "@/components/opcao-aprendizagem";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,6 +37,7 @@ interface Detalhe {
   category_id: string | null;
   categorized_by: string;
   is_movement: boolean;
+  custom_name: string | null;
   accounts: { name: string | null; iban: string | null } | null;
 }
 
@@ -54,7 +55,7 @@ export default async function TransacaoPage({
   const { data } = await supabase
     .from("transactions")
     .select(
-      "id, booking_date, amount, currency, description, counterparty, category_id, categorized_by, is_movement, accounts (name, iban)"
+      "id, booking_date, amount, currency, description, counterparty, category_id, categorized_by, is_movement, custom_name, accounts (name, iban)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -94,11 +95,14 @@ export default async function TransacaoPage({
     transacao.counterparty,
     new Map()
   );
-  const nomeAtual = resolverNome(
+  // Nome global do comerciante (aprendido/dicionário) e o efetivamente
+  // mostrado nesta linha (exceção pontual tem prioridade)
+  const nomeGlobal = resolverNome(
     transacao.description,
     transacao.counterparty,
     nomes
   );
+  const nomeAtual = transacao.custom_name ?? nomeGlobal;
 
   const palavraChave =
     extrairPalavraChave(transacao.description) ??
@@ -166,7 +170,7 @@ export default async function TransacaoPage({
         >
           <span className="flex items-center gap-2 font-medium">
             <Store className="size-4 text-muted-foreground" />
-            Ver histórico de {nomeAtual}
+            Ver histórico de {nomeGlobal}
           </span>
           <ChevronRight className="size-4 text-muted-foreground" />
         </Link>
@@ -264,6 +268,7 @@ export default async function TransacaoPage({
       <form action={categorizarTransacao} className="flex flex-col gap-4">
         <input type="hidden" name="transacao_id" value={transacao.id} />
         <input type="hidden" name="nome_predefinido" value={nomePredefinido} />
+        <input type="hidden" name="nome_global" value={nomeGlobal} />
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="nome">Nome</Label>
@@ -275,8 +280,7 @@ export default async function TransacaoPage({
             className="h-10 rounded-xl border-border/60 bg-card shadow-sm"
           />
           <p className="text-xs text-muted-foreground">
-            Dá um nome tipo “Intermarché” — todas as transações deste sítio
-            passam a mostrá-lo.
+            Dá um nome tipo “Intermarché”.
           </p>
         </div>
 
@@ -297,16 +301,7 @@ export default async function TransacaoPage({
           </select>
         </div>
 
-        {palavraChave && (
-          <p className="flex items-start gap-2 rounded-xl bg-accent p-3 text-xs text-accent-foreground">
-            <Sparkles className="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              A app aprende contigo: futuras transações com{" "}
-              <strong>“{palavraChave}”</strong> ficam automaticamente na
-              categoria que escolheres.
-            </span>
-          </p>
-        )}
+        {palavraChave && <OpcaoAprendizagem nomeComerciante={nomeGlobal} />}
 
         <BotaoSubmit pendingText="A guardar…">Guardar</BotaoSubmit>
       </form>

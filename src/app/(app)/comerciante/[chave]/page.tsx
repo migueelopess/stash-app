@@ -17,6 +17,7 @@ interface Linha {
   counterparty: string | null;
   category_id: string | null;
   is_movement: boolean;
+  custom_name: string | null;
   categories: { name: string; color: string | null; icon: string | null } | null;
 }
 
@@ -40,7 +41,7 @@ export default async function ComerciantePage({
       supabase
         .from("transactions")
         .select(
-          "id, booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
+          "id, booking_date, amount, description, counterparty, category_id, is_movement, custom_name, categories (name, color, icon)"
         )
         .or(`description.ilike.*${seguro}*,counterparty.ilike.*${seguro}*`)
         .order("booking_date", { ascending: false })
@@ -198,7 +199,7 @@ export default async function ComerciantePage({
                     )}
                   >
                     <p className="truncate text-sm">
-                      {t.description ?? nome}
+                      {t.custom_name ?? t.description ?? nome}
                     </p>
                     <p
                       className={cn(

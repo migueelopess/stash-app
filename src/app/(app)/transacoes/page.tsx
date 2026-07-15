@@ -51,6 +51,7 @@ interface Transacao {
   counterparty: string | null;
   category_id: string | null;
   is_movement: boolean;
+  custom_name: string | null;
   categories: {
     name: string;
     color: string | null;
@@ -93,7 +94,7 @@ export default async function TransacoesPage({
   let query = supabase
     .from("transactions")
     .select(
-      "id, booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
+      "id, booking_date, amount, description, counterparty, category_id, is_movement, custom_name, categories (name, color, icon)"
     )
     .order("booking_date", { ascending: false })
     .order("created_at", { ascending: false })
@@ -292,7 +293,8 @@ export default async function TransacoesPage({
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
-                        {resolverNome(t.description, t.counterparty, nomes)}
+                        {t.custom_name ??
+                          resolverNome(t.description, t.counterparty, nomes)}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {movimento

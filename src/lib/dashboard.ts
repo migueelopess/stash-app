@@ -9,6 +9,8 @@ export interface TransacaoDash {
   icone?: string | null;
   descricao?: string | null;
   contraparte?: string | null;
+  /** Nome pontual desta transação (exceção), tem prioridade na apresentação */
+  nomePersonalizado?: string | null;
   /** Movimento (reembolso/transferência): não conta como gasto nem ganho */
   movimento?: boolean;
 }
