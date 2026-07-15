@@ -12,6 +12,7 @@ import { IconeCategoria } from "@/components/icone-categoria";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  agregarComerciantes,
   chaveMes,
   compararCategorias,
   compararComerciantes,
@@ -104,11 +105,13 @@ function LinhaComparada({
   bomSeSobe,
   href,
   legenda,
+  semDelta,
 }: {
   item: ItemComparado;
   bomSeSobe: boolean;
   href?: string;
   legenda?: string;
+  semDelta?: boolean;
 }) {
   const trackMax = Math.max(item.atual, item.media, 1);
   const conteudo = (
@@ -125,7 +128,9 @@ function LinhaComparada({
           <p className="text-sm font-bold tabular-nums">
             {formatarEuros(item.atual)}
           </p>
-          <Delta dif={item.diferenca} pct={item.pct} bomSeSobe={bomSeSobe} />
+          {!semDelta && (
+            <Delta dif={item.diferenca} pct={item.pct} bomSeSobe={bomSeSobe} />
+          )}
         </div>
         {href && <ChevronRight className="size-4 shrink-0 text-muted-foreground" />}
       </div>
@@ -134,7 +139,7 @@ function LinhaComparada({
           className="h-full rounded-full transition-all"
           style={{ width: `${(item.atual / trackMax) * 100}%`, backgroundColor: item.cor }}
         />
-        {item.media > 0 && (
+        {!semDelta && item.media > 0 && (
           <span
             className="absolute top-[-2px] h-3 w-0.5 rounded bg-foreground/50"
             style={{ left: `calc(${(item.media / trackMax) * 100}% - 1px)` }}
@@ -158,7 +163,12 @@ function LinhaComparada({
 export default async function AnalisePage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string; tipo?: string; cat?: string }>;
+  searchParams: Promise<{
+    mes?: string;
+    tipo?: string;
+    cat?: string;
+    dm?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const agora = new Date();
@@ -167,6 +177,9 @@ export default async function AnalisePage({
   const tipo: TipoAnalise = sp.tipo === "ganhos" ? "ganhos" : "gastos";
   const catAlvo = sp.cat;
   const bomSeSobe = tipo === "ganhos";
+  // Mês em foco dentro do drill-in (barra clicada) ou "todos os meses"
+  const dmAll = Boolean(catAlvo) && sp.dm === "all";
+  const dmMes = catAlvo && !dmAll ? sp.dm ?? mes : mes;
 
   const supabase = await createClient();
   const inicio = new Date();
@@ -239,8 +252,17 @@ export default async function AnalisePage({
             {catAlvo ? nomeCategoria : "Análise"}
           </h1>
           <p className="text-xs capitalize text-muted-foreground">
-            {formatoMesCurto.format(new Date(`${mes}-01T12:00:00`))}
-            {mes === mesAtual ? ` · até dia ${agora.getDate()}` : " · mês completo"}
+            {catAlvo && dmAll
+              ? "todos os meses"
+              : `${formatoMesCurto.format(
+                  new Date(`${catAlvo ? dmMes : mes}-01T12:00:00`)
+                )}${
+                  (catAlvo ? dmMes : mes) === mesAtual
+                    ? ` · até dia ${agora.getDate()}`
+                    : catAlvo
+                      ? ""
+                      : " · mês completo"
+                }`}
           </p>
         </div>
       </div>
@@ -264,8 +286,11 @@ export default async function AnalisePage({
           tipo={tipo}
           agora={agora}
           catId={catAlvo}
+          dmMes={dmMes}
+          dmAll={dmAll}
           bomSeSobe={bomSeSobe}
           rotuloTipo={rotuloTipo}
+          baseHref={baseHref}
         />
       ) : (
         <>
@@ -446,86 +471,142 @@ function DrillCategoria({
   tipo,
   agora,
   catId,
+  dmMes,
+  dmAll,
   bomSeSobe,
   rotuloTipo,
+  baseHref,
 }: {
   txs: TxAnalise[];
   mes: string;
   tipo: TipoAnalise;
   agora: Date;
   catId: string;
+  dmMes: string;
+  dmAll: boolean;
   bomSeSobe: boolean;
   rotuloTipo: string;
+  baseHref: string;
 }) {
   const historico = historicoMensal(txs, mes, tipo, 6, catId);
   const maxMes = Math.max(1, ...historico.map((p) => p.valor));
   const corCat = txs.find((t) => t.categoryId === catId)?.cor ?? "#8b5cf6";
-  const { itens } = compararComerciantes(txs, mes, agora, 3, tipo, catId);
-  const totalMes = historico.find((p) => p.alvo)?.valor ?? 0;
+  const drillHref = `${baseHref}&cat=${catId}`;
+
+  // Comerciantes: agregado (todos) ou comparados com o habitual (mês)
+  const comerciantes = dmAll
+    ? agregarComerciantes(txs, tipo, catId)
+    : [...compararComerciantes(txs, dmMes, agora, 3, tipo, catId).itens].sort(
+        (a, b) => b.atual - a.atual
+      );
+
+  const totalCabecalho = dmAll
+    ? historico.reduce((s, p) => s + p.valor, 0)
+    : historico.find((p) => p.chave === dmMes)?.valor ?? 0;
+
+  const rotuloMesAtivo = dmAll
+    ? "todos os meses"
+    : historico.find((p) => p.chave === dmMes)?.rotulo ?? dmMes;
 
   return (
     <>
       <div className="rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-700 to-purple-800 p-5 text-white shadow-lg shadow-violet-900/20">
-        <p className="text-sm font-medium text-violet-100">{rotuloTipo} no mês</p>
+        <p className="text-sm font-medium capitalize text-violet-100">
+          {rotuloTipo} · {rotuloMesAtivo}
+        </p>
         <p className="mt-1 text-4xl font-extrabold tabular-nums tracking-tight">
-          {formatarEuros(totalMes)}
+          {formatarEuros(totalCabecalho)}
         </p>
       </div>
 
-      {/* Tendência 6 meses */}
+      {/* Tendência 6 meses — barras clicáveis */}
       <Card className="border-none shadow-sm">
         <CardContent className="flex flex-col gap-3 pt-3">
-          <p className="text-sm font-medium">Últimos 6 meses</p>
-          <div className="flex items-end justify-between gap-2 pt-1">
-            {historico.map((p) => (
-              <div key={p.chave} className="flex flex-1 flex-col items-center gap-1.5">
-                <div className="flex h-24 w-full items-end justify-center">
-                  <div
-                    className="w-5 rounded-full transition-all"
-                    style={{
-                      height: `${Math.max(3, (p.valor / maxMes) * 100)}%`,
-                      backgroundColor:
-                        p.valor > 0 ? corCat : "var(--muted)",
-                      opacity: p.alvo || p.valor === 0 ? 1 : 0.45,
-                    }}
-                  />
-                </div>
-                <span
-                  className={cn(
-                    "text-[10px] capitalize",
-                    p.alvo
-                      ? "font-bold text-foreground"
-                      : "text-muted-foreground"
-                  )}
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Últimos 6 meses</p>
+            <Link
+              href={dmAll ? drillHref : `${drillHref}&dm=all`}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                dmAll
+                  ? "bg-primary/15 text-primary"
+                  : "bg-muted text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Todos os meses
+            </Link>
+          </div>
+          <p className="-mt-1 text-xs text-muted-foreground">
+            Toca num mês para ver os comerciantes desse mês
+          </p>
+          <div className="flex items-end justify-between gap-1 pt-1">
+            {historico.map((p) => {
+              const ativo = !dmAll && p.chave === dmMes;
+              return (
+                <Link
+                  key={p.chave}
+                  href={`${drillHref}&dm=${p.chave}`}
+                  scroll={false}
+                  className="flex flex-1 flex-col items-center gap-1.5 rounded-xl py-1 transition-colors hover:bg-muted/50"
                 >
-                  {p.rotulo}
-                </span>
-              </div>
-            ))}
+                  <div className="flex h-24 w-full items-end justify-center">
+                    <div
+                      className="w-5 rounded-full transition-all"
+                      style={{
+                        height: `${Math.max(3, (p.valor / maxMes) * 100)}%`,
+                        backgroundColor: p.valor > 0 ? corCat : "var(--muted)",
+                        opacity: dmAll || ativo || p.valor === 0 ? 1 : 0.4,
+                      }}
+                    />
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[10px] capitalize",
+                      ativo ? "font-bold text-foreground" : "text-muted-foreground"
+                    )}
+                  >
+                    {p.rotulo}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Comerciantes dentro da categoria */}
+      {/* Comerciantes do mês escolhido (ou de todos) */}
       <div className="flex flex-col gap-2">
-        <p className="flex items-center gap-1.5 px-1 text-sm font-semibold">
-          <Store className="size-4 text-muted-foreground" /> Comerciantes
+        <p className="flex items-center gap-1.5 px-1 text-sm font-semibold capitalize">
+          <Store className="size-4 text-muted-foreground" /> Comerciantes ·{" "}
+          {rotuloMesAtivo}
         </p>
-        {itens.length === 0 ? (
+        {comerciantes.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-            Sem comerciantes identificados neste mês.
+            Sem comerciantes identificados{dmAll ? "" : " neste mês"}.
           </p>
         ) : (
-          itens
-            .sort((a, b) => b.atual - a.atual)
-            .map((m) => (
-              <LinhaComparada
-                key={m.chave}
-                item={m}
-                bomSeSobe={bomSeSobe}
-                href={`/comerciante/${encodeURIComponent(m.chave)}`}
-              />
-            ))
+          comerciantes.map((m) => (
+            <LinhaComparada
+              key={m.chave}
+              item={m}
+              bomSeSobe={bomSeSobe}
+              semDelta={dmAll}
+              legenda={
+                dmAll
+                  ? `${m.contagem} ${
+                      tipo === "gastos"
+                        ? m.contagem === 1
+                          ? "compra"
+                          : "compras"
+                        : m.contagem === 1
+                          ? "entrada"
+                          : "entradas"
+                    }`
+                  : undefined
+              }
+              href={`/comerciante/${encodeURIComponent(m.chave)}`}
+            />
+          ))
         )}
       </div>
     </>

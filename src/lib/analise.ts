@@ -26,6 +26,7 @@ export interface ItemComparado {
   media: number;
   diferenca: number;
   pct: number | null;
+  contagem: number; // nº de transações no mês alvo
 }
 
 const R = (n: number) => Math.round(n * 100) / 100;
@@ -78,6 +79,7 @@ function compararAgrupado(
 
   const meta = new Map<string, Grupo>();
   const atual = new Map<string, number>();
+  const contagem = new Map<string, number>();
   const porBase = new Map<string, Map<string, number>>();
 
   for (const t of txs) {
@@ -92,6 +94,7 @@ function compararAgrupado(
     if (!meta.has(g.chave)) meta.set(g.chave, g);
     if (mes === mesAlvo) {
       atual.set(g.chave, (atual.get(g.chave) ?? 0) + v);
+      contagem.set(g.chave, (contagem.get(g.chave) ?? 0) + 1);
     } else {
       const mm = porBase.get(g.chave) ?? new Map<string, number>();
       mm.set(mes, (mm.get(mes) ?? 0) + v);
@@ -122,6 +125,7 @@ function compararAgrupado(
       media,
       diferenca: dif,
       pct,
+      contagem: contagem.get(ch) ?? 0,
     });
   }
   itens.sort((x, y) => y.diferenca - x.diferenca);
@@ -284,4 +288,49 @@ export function historicoMensal(
     p.valor = R(p.valor + valorTipo(t.amount, tipo));
   }
   return pontos;
+}
+
+/**
+ * Agrega comerciantes por todo o histórico carregado (sem comparação) — para
+ * a vista "Todos os meses" do drill-in. Ordenado por total.
+ */
+export function agregarComerciantes(
+  txs: TxAnalise[],
+  tipo: TipoAnalise,
+  categoryId?: string
+): ItemComparado[] {
+  const meta = new Map<string, Grupo>();
+  const soma = new Map<string, number>();
+  const cont = new Map<string, number>();
+
+  for (const t of txs) {
+    if (t.movimento || !t.chave) continue;
+    if (categoryId && t.categoryId !== categoryId) continue;
+    const v = valorTipo(t.amount, tipo);
+    if (v === 0) continue;
+    if (!meta.has(t.chave)) {
+      meta.set(t.chave, {
+        chave: t.chave,
+        rotulo: t.nomeComerciante,
+        cor: t.cor,
+        icone: t.icone,
+      });
+    }
+    soma.set(t.chave, (soma.get(t.chave) ?? 0) + v);
+    cont.set(t.chave, (cont.get(t.chave) ?? 0) + 1);
+  }
+
+  return [...meta.values()]
+    .map((g) => ({
+      chave: g.chave,
+      rotulo: g.rotulo,
+      cor: g.cor,
+      icone: g.icone,
+      atual: R(soma.get(g.chave) ?? 0),
+      media: 0,
+      diferenca: 0,
+      pct: null,
+      contagem: cont.get(g.chave) ?? 0,
+    }))
+    .sort((a, b) => b.atual - a.atual);
 }
