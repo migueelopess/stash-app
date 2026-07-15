@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, Sparkles, Store } from "lucide-react";
 import { BotaoSubmit } from "@/components/botao-submit";
 import { Button } from "@/components/ui/button";
 import {
@@ -130,6 +130,19 @@ export default async function TransacaoPage({
           {transacao.description && <p>{transacao.description}</p>}
         </CardContent>
       </Card>
+
+      {palavraChave && (
+        <Link
+          href={`/comerciante/${encodeURIComponent(palavraChave)}`}
+          className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-card p-3 text-sm shadow-sm transition-colors hover:bg-muted/50 active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <Store className="size-4 text-muted-foreground" />
+            Ver histórico de {nomeAtual}
+          </span>
+          <ChevronRight className="size-4 text-muted-foreground" />
+        </Link>
+      )}
 
       <form action={categorizarTransacao} className="flex flex-col gap-4">
         <input type="hidden" name="transacao_id" value={transacao.id} />

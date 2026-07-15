@@ -1,8 +1,10 @@
 import Link from "next/link";
 import {
   Banknote,
+  ChevronRight,
   HandCoins,
   PiggyBank,
+  Repeat,
   TrendingDown,
   TrendingUp,
   TriangleAlert,
@@ -36,7 +38,8 @@ import {
 } from "@/lib/dashboard";
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { diasAte, formatarEuros } from "@/lib/format";
-import { resolverNome } from "@/lib/nomes-comerciantes";
+import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
+import { detetarRecorrencias, type TxRecorrencia } from "@/lib/recorrencias";
 import {
   CORES_NIVEL,
   estadoDoOrcamento,
@@ -197,6 +200,31 @@ export default async function DashboardPage() {
     .map((o) => estadoDoOrcamento(o, transacoesOrcamento))
     .sort((a, b) => b.percentagem - a.percentagem)
     .slice(0, 3);
+
+  // Gastos fixos / recorrências (para o cartão-resumo)
+  const txsRecorrencia: TxRecorrencia[] = linhas
+    .map((t): TxRecorrencia | null => {
+      const chave = chaveDoNome(t.description, t.counterparty);
+      if (!chave) return null;
+      return {
+        chave,
+        booking_date: t.booking_date,
+        amount: Number(t.amount),
+        descricao: t.description,
+        contraparte: t.counterparty,
+        categoria: t.categories?.name ?? null,
+        cor: null,
+        icone: t.categories?.icon ?? null,
+      };
+    })
+    .filter((t): t is TxRecorrencia => t !== null);
+  const recorrenciasAtivas = detetarRecorrencias(txsRecorrencia).filter(
+    (r) => r.ativa
+  );
+  const totalFixoMensal = recorrenciasAtivas.reduce(
+    (s, r) => s + r.mensalEquivalente,
+    0
+  );
 
   const aRenovar = (ligacoes ?? []).filter(
     (ligacao) => diasAte(ligacao.valid_until) <= 14
@@ -407,7 +435,33 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(4)}>
+      {totalFixoMensal > 0 && (
+        <Link
+          href="/recorrencias"
+          className={cn(
+            "flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm transition-all hover:bg-muted/40 active:scale-[0.99]",
+            ANIM
+          )}
+          style={atraso(4)}
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400">
+            <Repeat className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">Gastos fixos</span>
+            <span className="block text-xs text-muted-foreground">
+              {recorrenciasAtivas.length}{" "}
+              {recorrenciasAtivas.length === 1
+                ? "recorrência"
+                : "recorrências"}{" "}
+              · {formatarEuros(totalFixoMensal)}/mês
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
+
+      <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(5)}>
         <CardHeader>
           <CardTitle className="text-sm">Ganhos vs. gastos</CardTitle>
         </CardHeader>
