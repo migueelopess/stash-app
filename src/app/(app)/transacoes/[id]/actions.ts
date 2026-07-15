@@ -12,8 +12,10 @@ export async function categorizarTransacao(formData: FormData) {
   const nome = ((formData.get("nome") as string) ?? "").trim();
   const nomePredefinido = ((formData.get("nome_predefinido") as string) ?? "").trim();
   const nomeGlobal = ((formData.get("nome_global") as string) ?? "").trim();
-  // "Só esta transação": não aprende regra nem altera o nome do comerciante
-  const apenasEsta = formData.get("apenas_esta") === "on";
+  // Por defeito a app aprende (toggle ligado). Desligado = exceção pontual:
+  // não aprende regra nem altera o nome do comerciante. A checkbox só chega
+  // ao formulário quando está ligada, por isso a ausência = exceção.
+  const apenasEsta = formData.get("lembrar") !== "on";
 
   const supabase = await createClient();
   const {
