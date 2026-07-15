@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronRight, Sparkles, Store } from "lucide-react";
+import { ArrowLeft, ChevronRight, HandCoins, Sparkles, Store } from "lucide-react";
 import { BotaoSubmit } from "@/components/botao-submit";
 import { Button } from "@/components/ui/button";
 import {
@@ -143,6 +143,21 @@ export default async function TransacaoPage({
           <ChevronRight className="size-4 text-muted-foreground" />
         </Link>
       )}
+
+      <Link
+        href={`/dividas?form=nova&valor=${Math.abs(valor).toFixed(2)}${
+          transacao.counterparty
+            ? `&nome=${encodeURIComponent(transacao.counterparty)}`
+            : ""
+        }&dir=${valor < 0 ? "a_receber" : "a_pagar"}&tx=${transacao.id}`}
+        className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-card p-3 text-sm shadow-sm transition-colors hover:bg-muted/50 active:scale-[0.99]"
+      >
+        <span className="flex items-center gap-2 font-medium">
+          <HandCoins className="size-4 text-muted-foreground" />
+          Registar como dívida
+        </span>
+        <ChevronRight className="size-4 text-muted-foreground" />
+      </Link>
 
       <form action={categorizarTransacao} className="flex flex-col gap-4">
         <input type="hidden" name="transacao_id" value={transacao.id} />

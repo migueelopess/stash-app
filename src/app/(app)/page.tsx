@@ -103,6 +103,7 @@ export default async function DashboardPage() {
     { data: metas },
     { data: nomesRaw },
     { data: orcamentosRaw },
+    { data: dividasRaw },
     overrides,
   ] = await Promise.all([
     supabase.from("accounts").select("balance"),
@@ -126,8 +127,20 @@ export default async function DashboardPage() {
     supabase
       .from("budgets")
       .select("id, category_id, amount, period, categories (name, color, icon)"),
+    supabase.from("debts").select("direction, amount").eq("settled", false),
     carregarCoresOverride(supabase),
   ]);
+
+  const dividas = (dividasRaw ?? []) as {
+    direction: string;
+    amount: string;
+  }[];
+  const totalReceber = dividas
+    .filter((d) => d.direction === "a_receber")
+    .reduce((s, d) => s + Number(d.amount), 0);
+  const totalPagar = dividas
+    .filter((d) => d.direction === "a_pagar")
+    .reduce((s, d) => s + Number(d.amount), 0);
 
   if (!contas || contas.length === 0) {
     return (
@@ -458,6 +471,33 @@ export default async function DashboardPage() {
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
+
+      {(totalReceber > 0 || totalPagar > 0) && (
+        <Link
+          href="/dividas"
+          className={cn(
+            "flex items-stretch gap-2 rounded-2xl", ANIM
+          )}
+          style={atraso(4)}
+        >
+          <span className="flex flex-1 flex-col rounded-2xl bg-emerald-500/12 p-3">
+            <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+              Devem-me
+            </span>
+            <span className="text-base font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+              {formatarEuros(totalReceber)}
+            </span>
+          </span>
+          <span className="flex flex-1 flex-col rounded-2xl bg-rose-500/12 p-3">
+            <span className="text-[11px] font-medium text-rose-700 dark:text-rose-300">
+              Devo
+            </span>
+            <span className="text-base font-bold tabular-nums text-rose-700 dark:text-rose-300">
+              {formatarEuros(totalPagar)}
+            </span>
+          </span>
         </Link>
       )}
 
