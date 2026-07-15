@@ -74,9 +74,44 @@ export default async function ComerciantePage({
   );
   const totalGasto = gastos.reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
   const nGastos = gastos.length;
-  const ticketMedio = nGastos > 0 ? totalGasto / nGastos : 0;
 
-  // Gasto por mês (últimos 6 meses) para a mini-tendência
+  const ganhos = transacoes.filter(
+    (t) => Number(t.amount) > 0 && !t.is_movement
+  );
+  const totalGanho = ganhos.reduce((s, t) => s + Number(t.amount), 0);
+  const nGanhos = ganhos.length;
+
+  const temGastos = nGastos > 0;
+  const temGanhos = nGanhos > 0;
+
+  // Cartões de resumo adaptativos: com um só fluxo mostra média/vez; com
+  // ambos mostra os dois totais.
+  const cartoes: { rotulo: string; valor: string; positivo?: boolean }[] = [];
+  if (temGastos) {
+    cartoes.push({ rotulo: "Total gasto", valor: formatarEuros(totalGasto) });
+  }
+  if (temGanhos) {
+    cartoes.push({
+      rotulo: "Total recebido",
+      valor: formatarEuros(totalGanho),
+      positivo: true,
+    });
+  }
+  cartoes.push({ rotulo: "Transações", valor: String(nGastos + nGanhos) });
+  if (temGastos !== temGanhos) {
+    const total = temGastos ? totalGasto : totalGanho;
+    const n = temGastos ? nGastos : nGanhos;
+    cartoes.push({
+      rotulo: "Média/vez",
+      valor: formatarEuros(n > 0 ? total / n : 0),
+    });
+  }
+
+  // Mini-tendência de 6 meses do fluxo dominante (gasto ou recebido)
+  const usarGanhos = totalGanho > totalGasto;
+  const fluxo = usarGanhos ? ganhos : gastos;
+  const totalFluxo = usarGanhos ? totalGanho : totalGasto;
+  const corBarra = usarGanhos ? "#10b981" : cor ?? "#10b981";
   const meses: { chave: string; rotulo: string; valor: number }[] = [];
   const d = new Date();
   d.setDate(1);
@@ -89,14 +124,13 @@ export default async function ComerciantePage({
     d.setMonth(d.getMonth() - 1);
   }
   const porChave = new Map(meses.map((m) => [m.chave, m]));
-  for (const t of gastos) {
+  for (const t of fluxo) {
     const m = porChave.get(t.booking_date.slice(0, 7));
     if (m) m.valor += Math.abs(Number(t.amount));
   }
   const maxMes = Math.max(1, ...meses.map((m) => m.valor));
-  const mesesComGasto = meses.filter((m) => m.valor > 0).length || 1;
-  const mediaMensal =
-    meses.reduce((s, m) => s + m.valor, 0) / mesesComGasto;
+  const mesesComFluxo = meses.filter((m) => m.valor > 0).length || 1;
+  const mediaMensal = meses.reduce((s, m) => s + m.valor, 0) / mesesComFluxo;
 
   // Agrupar histórico por dia
   const grupos = new Map<string, Linha[]>();
@@ -129,28 +163,30 @@ export default async function ComerciantePage({
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        {[
-          { rotulo: "Total gasto", valor: formatarEuros(totalGasto) },
-          {
-            rotulo: "Transações",
-            valor: String(nGastos),
-          },
-          { rotulo: "Média/vez", valor: formatarEuros(ticketMedio) },
-        ].map((s) => (
+        {cartoes.map((s) => (
           <Card key={s.rotulo} className="border-none shadow-sm">
             <CardContent className="flex flex-col gap-1 pt-1">
               <p className="text-[11px] text-muted-foreground">{s.rotulo}</p>
-              <p className="text-sm font-bold tabular-nums">{s.valor}</p>
+              <p
+                className={cn(
+                  "text-sm font-bold tabular-nums",
+                  s.positivo && "text-emerald-600 dark:text-emerald-400"
+                )}
+              >
+                {s.valor}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {totalGasto > 0 && (
+      {totalFluxo > 0 && (
         <Card className="border-none shadow-sm">
           <CardContent className="flex flex-col gap-3 pt-3">
             <div className="flex items-baseline justify-between">
-              <p className="text-sm font-medium">Últimos 6 meses</p>
+              <p className="text-sm font-medium">
+                {usarGanhos ? "Recebido" : "Gasto"} · últimos 6 meses
+              </p>
               <p className="text-xs text-muted-foreground">
                 média {formatarEuros(mediaMensal)}/mês
               </p>
@@ -163,7 +199,7 @@ export default async function ComerciantePage({
                       className="w-5 rounded-full transition-all"
                       style={{
                         height: `${Math.max(3, (m.valor / maxMes) * 100)}%`,
-                        backgroundColor: m.valor > 0 ? (cor ?? "#10b981") : "var(--muted)",
+                        backgroundColor: m.valor > 0 ? corBarra : "var(--muted)",
                       }}
                     />
                   </div>

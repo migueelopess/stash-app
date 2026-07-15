@@ -64,7 +64,7 @@ export default async function OrcamentosPage({
     supabase
       .from("budgets")
       .select(
-        "id, category_id, amount, period, categories (name, color, icon)"
+        "id, category_id, amount, period, start_date, categories (name, color, icon)"
       ),
     supabase
       .from("transactions")

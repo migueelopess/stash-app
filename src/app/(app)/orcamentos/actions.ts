@@ -26,6 +26,8 @@ export async function criarOrcamento(formData: FormData) {
     category_id: categoriaId === "global" ? null : categoriaId,
     amount: valor.toFixed(2),
     period,
+    // Ancorar a janela ao dia de criação (semana/mês/ano rolam a partir daqui)
+    start_date: new Date().toISOString().slice(0, 10),
   });
 
   if (error) {
@@ -51,6 +53,15 @@ export async function atualizarOrcamento(formData: FormData) {
   }
 
   const supabase = await createClient();
+
+  // Se o período mudar, reancorar a janela ao dia de hoje
+  const { data: atual } = await supabase
+    .from("budgets")
+    .select("period")
+    .eq("id", orcamentoId)
+    .maybeSingle();
+  const mudouPeriodo = atual?.period !== period;
+
   const { error } = await supabase
     .from("budgets")
     .update({
@@ -58,6 +69,9 @@ export async function atualizarOrcamento(formData: FormData) {
       period,
       // limite mudou → os limiares de alerta recomeçam
       alert_level: 0,
+      ...(mudouPeriodo
+        ? { start_date: new Date().toISOString().slice(0, 10) }
+        : {}),
     })
     .eq("id", orcamentoId);
 

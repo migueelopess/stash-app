@@ -27,7 +27,7 @@ export async function verificarAlertasDeOrcamentos(
     const { data: orcamentosRaw } = await supabase
       .from("budgets")
       .select(
-        "id, category_id, amount, period, alert_level, alert_period, categories (name, color, icon)"
+        "id, category_id, amount, period, start_date, alert_level, alert_period, categories (name, color, icon)"
       )
       .eq("user_id", userId);
 
@@ -57,7 +57,7 @@ export async function verificarAlertasDeOrcamentos(
 
     for (const orcamento of orcamentos) {
       const estado = estadoDoOrcamento(orcamento, transacoes);
-      const periodo = chavePeriodo(orcamento.period);
+      const periodo = chavePeriodo(orcamento.period, orcamento.start_date);
 
       // Novo período → recomeçar os alertas
       const nivelGuardado =

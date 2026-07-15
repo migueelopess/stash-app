@@ -45,7 +45,9 @@ export default async function OrcamentoPage({
   const [{ data }, { data: transacoesRaw }] = await Promise.all([
     supabase
       .from("budgets")
-      .select("id, category_id, amount, period, categories (name, color, icon)")
+      .select(
+        "id, category_id, amount, period, start_date, categories (name, color, icon)"
+      )
       .eq("id", id)
       .maybeSingle(),
     supabase

@@ -135,7 +135,9 @@ export default async function DashboardPage() {
     supabase.from("merchant_names").select("match_value, display_name"),
     supabase
       .from("budgets")
-      .select("id, category_id, amount, period, categories (name, color, icon)"),
+      .select(
+        "id, category_id, amount, period, start_date, categories (name, color, icon)"
+      ),
     supabase.from("debts").select("direction, amount").eq("settled", false),
     supabase.from("recurring_exclusions").select("chave"),
     supabase.from("recurring_confirmations").select("chave"),

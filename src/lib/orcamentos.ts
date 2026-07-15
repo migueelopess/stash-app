@@ -7,6 +7,7 @@ export interface OrcamentoComCategoria {
   category_id: string | null; // null = orçamento global de gastos
   amount: number;
   period: Periodo;
+  start_date: string; // âncora: a janela rola a partir deste dia (ISO)
   categories: { name: string; color: string | null; icon: string | null } | null;
 }
 
@@ -30,45 +31,70 @@ export interface EstadoOrcamento {
 
 const DIA_MS = 1000 * 60 * 60 * 24;
 
-function segundaFeiraDa(agora: Date): Date {
-  const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // domingo=0 → recua 6
-  return d;
-}
-
 function dataLocalIso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Identificador do período atual (para o dedupe de alertas). */
-export function chavePeriodo(period: Periodo, agora = new Date()): string {
-  if (period === "weekly") return `S${dataLocalIso(segundaFeiraDa(agora))}`;
-  if (period === "monthly") {
-    return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}`;
-  }
-  return String(agora.getFullYear());
+/** Meia-noite local a partir de uma data ISO "YYYY-MM-DD". */
+function diaLocalDeIso(iso: string): Date {
+  const [ano, mes, dia] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(ano, (mes ?? 1) - 1, dia ?? 1);
 }
 
+/** Soma n meses mantendo o dia do mês, encolhendo se o mês for mais curto. */
+function somarMeses(base: Date, n: number): Date {
+  const total = base.getMonth() + n;
+  const ano = base.getFullYear() + Math.floor(total / 12);
+  const mes = ((total % 12) + 12) % 12;
+  const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+  return new Date(ano, mes, Math.min(base.getDate(), ultimoDia));
+}
+
+/**
+ * Janela atual do orçamento, ancorada em `anchorIso` (dia de criação) e a
+ * rolar: semanal = blocos de 7 dias; mensal = mesmo dia de cada mês; anual =
+ * aniversário. Devolve o bloco que contém `agora`.
+ */
 function limitesDoPeriodo(
   period: Periodo,
+  anchorIso: string,
   agora = new Date()
 ): { inicio: Date; fim: Date } {
+  const anchor = diaLocalDeIso(anchorIso);
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+
   if (period === "weekly") {
-    const inicio = segundaFeiraDa(agora);
+    const blocos = Math.max(
+      0,
+      Math.floor((hoje.getTime() - anchor.getTime()) / (7 * DIA_MS))
+    );
+    const inicio = new Date(anchor);
+    inicio.setDate(inicio.getDate() + blocos * 7);
     const fim = new Date(inicio);
     fim.setDate(fim.getDate() + 7);
     return { inicio, fim };
   }
-  if (period === "monthly") {
-    return {
-      inicio: new Date(agora.getFullYear(), agora.getMonth(), 1),
-      fim: new Date(agora.getFullYear(), agora.getMonth() + 1, 1),
-    };
-  }
-  return {
-    inicio: new Date(agora.getFullYear(), 0, 1),
-    fim: new Date(agora.getFullYear() + 1, 0, 1),
-  };
+
+  const passo = period === "monthly" ? 1 : 12;
+  const mesesDesdeAncora =
+    (hoje.getFullYear() - anchor.getFullYear()) * 12 +
+    (hoje.getMonth() - anchor.getMonth());
+  // Arredondar para baixo ao passo e garantir inicio <= hoje
+  let n = Math.floor(mesesDesdeAncora / passo) * passo;
+  if (somarMeses(anchor, n) > hoje) n -= passo;
+  const inicio = somarMeses(anchor, n);
+  const fim = somarMeses(anchor, n + passo);
+  return { inicio, fim };
+}
+
+/** Identificador do período atual (para o dedupe de alertas). */
+export function chavePeriodo(
+  period: Periodo,
+  anchorIso: string,
+  agora = new Date()
+): string {
+  const { inicio } = limitesDoPeriodo(period, anchorIso, agora);
+  return dataLocalIso(inicio);
 }
 
 /** Estado atual de um orçamento face às transações do ano. */
@@ -77,7 +103,11 @@ export function estadoDoOrcamento(
   transacoes: TransacaoParaOrcamento[],
   agora = new Date()
 ): EstadoOrcamento {
-  const { inicio, fim } = limitesDoPeriodo(orcamento.period, agora);
+  const { inicio, fim } = limitesDoPeriodo(
+    orcamento.period,
+    orcamento.start_date,
+    agora
+  );
   const inicioIso = dataLocalIso(inicio);
 
   let gasto = 0;
