@@ -52,15 +52,36 @@ const FATOR_MENSAL: Record<Cadencia, number> = {
   yearly: 1 / 12,
 };
 
-/** Deteta subscrições/gastos fixos: mesmo comerciante, cadência regular e
- * valor consistente, com pelo menos 3 ocorrências. */
+// Transferências (MB Way, etc.) nunca são gastos fixos — variam por mil razões
+const CATEGORIAS_NUNCA_FIXAS = new Set([
+  "Transferências",
+  "Transferências recebidas",
+]);
+
+function coefVariacao(nums: number[]): number {
+  const media = nums.reduce((s, n) => s + n, 0) / nums.length;
+  if (media === 0) return Infinity;
+  const variancia =
+    nums.reduce((s, n) => s + (n - media) ** 2, 0) / nums.length;
+  return Math.sqrt(variancia) / media;
+}
+
+/**
+ * Deteta subscrições/gastos fixos. O sinal forte de uma subscrição é
+ * valor quase idêntico + intervalos regulares (Netflix, Spotify, ginásio).
+ * Restaurantes, MB Way, apostas variam de valor/timing e são descartados.
+ * Categoria "Subscrições" tem regras mais tolerantes (para nunca falhar
+ * uma sub real); comerciantes em `chavesExcluidas` nunca aparecem.
+ */
 export function detetarRecorrencias(
   transacoes: TxRecorrencia[],
+  chavesExcluidas: Set<string> = new Set(),
   agora = new Date()
 ): Recorrencia[] {
   const grupos = new Map<string, TxRecorrencia[]>();
   for (const t of transacoes) {
     if (t.amount >= 0 || !t.chave) continue;
+    if (chavesExcluidas.has(t.chave)) continue;
     const g = grupos.get(t.chave) ?? [];
     g.push(t);
     grupos.set(t.chave, g);
@@ -69,7 +90,13 @@ export function detetarRecorrencias(
   const resultado: Recorrencia[] = [];
 
   for (const [chave, lista] of grupos) {
-    if (lista.length < 3) continue;
+    const categoria = lista[lista.length - 1].categoria;
+    if (categoria && CATEGORIAS_NUNCA_FIXAS.has(categoria)) continue;
+
+    const eSubscricao = categoria === "Subscrições";
+    const minOcorr = eSubscricao ? 2 : 3;
+    if (lista.length < minOcorr) continue;
+
     const ordenadas = [...lista].sort((a, b) =>
       a.booking_date < b.booking_date ? -1 : 1
     );
@@ -83,15 +110,18 @@ export function detetarRecorrencias(
     const cadencia = classificarCadencia(gapMediano);
     if (!cadencia) continue;
 
-    // Valor consistente (subscrição), não gastos variáveis
+    // Intervalos regulares (subscrição cai ~no mesmo dia; restaurante não)
+    if (gaps.length >= 2) {
+      const limiteGap = eSubscricao ? 0.6 : 0.4;
+      if (coefVariacao(gaps) > limiteGap) continue;
+    }
+
+    // Valor quase idêntico — o filtro-chave contra idas ao BK/McDonald's
     const valores = ordenadas.map((t) => Math.abs(t.amount));
     const valMediano = mediana(valores);
     if (valMediano <= 0) continue;
-    const desvio =
-      valores.reduce((s, v) => s + Math.abs(v - valMediano), 0) /
-      valores.length /
-      valMediano;
-    if (desvio > 0.35) continue; // demasiado variável → não é subscrição
+    const limiteValor = eSubscricao ? 0.4 : 0.15;
+    if (coefVariacao(valores) > limiteValor) continue;
 
     const ultima = ordenadas[ordenadas.length - 1];
     const ultimaMs = datas[datas.length - 1];

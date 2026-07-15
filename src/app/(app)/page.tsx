@@ -104,6 +104,7 @@ export default async function DashboardPage() {
     { data: nomesRaw },
     { data: orcamentosRaw },
     { data: dividasRaw },
+    { data: exclusoesRecRaw },
     overrides,
   ] = await Promise.all([
     supabase.from("accounts").select("balance"),
@@ -128,8 +129,13 @@ export default async function DashboardPage() {
       .from("budgets")
       .select("id, category_id, amount, period, categories (name, color, icon)"),
     supabase.from("debts").select("direction, amount").eq("settled", false),
+    supabase.from("recurring_exclusions").select("chave"),
     carregarCoresOverride(supabase),
   ]);
+
+  const excluidasRec = new Set(
+    (exclusoesRecRaw ?? []).map((e) => e.chave as string)
+  );
 
   const dividas = (dividasRaw ?? []) as {
     direction: string;
@@ -231,9 +237,10 @@ export default async function DashboardPage() {
       };
     })
     .filter((t): t is TxRecorrencia => t !== null);
-  const recorrenciasAtivas = detetarRecorrencias(txsRecorrencia).filter(
-    (r) => r.ativa
-  );
+  const recorrenciasAtivas = detetarRecorrencias(
+    txsRecorrencia,
+    excluidasRec
+  ).filter((r) => r.ativa);
   const totalFixoMensal = recorrenciasAtivas.reduce(
     (s, r) => s + r.mensalEquivalente,
     0

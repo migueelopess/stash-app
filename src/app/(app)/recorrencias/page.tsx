@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, Repeat, TrendingUp } from "lucide-react";
+import { ArrowLeft, EyeOff, Repeat, RotateCcw, TrendingUp, X } from "lucide-react";
+import { BotaoSubmit } from "@/components/botao-submit";
 import { IconeCategoria } from "@/components/icone-categoria";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { chaveDoNome } from "@/lib/nomes-comerciantes";
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { formatarData, formatarEuros } from "@/lib/format";
-import { resolverNome } from "@/lib/nomes-comerciantes";
+import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
 import {
   ROTULO_CADENCIA,
   detetarRecorrencias,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/recorrencias";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+import { excluirRecorrencia, restaurarRecorrencia } from "./actions";
 
 interface Linha {
   booking_date: string;
@@ -30,22 +31,28 @@ export default async function RecorrenciasPage() {
   const inicio = new Date();
   inicio.setMonth(inicio.getMonth() - 13);
 
-  const [{ data: transacoesRaw }, { data: nomesRaw }, overrides] =
-    await Promise.all([
-      supabase
-        .from("transactions")
-        .select(
-          "booking_date, amount, description, counterparty, category_id, categories (name, color, icon)"
-        )
-        .lt("amount", 0)
-        .gte("booking_date", inicio.toISOString().slice(0, 10)),
-      supabase.from("merchant_names").select("match_value, display_name"),
-      carregarCoresOverride(supabase),
-    ]);
+  const [
+    { data: transacoesRaw },
+    { data: nomesRaw },
+    { data: exclusoesRaw },
+    overrides,
+  ] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select(
+        "booking_date, amount, description, counterparty, category_id, categories (name, color, icon)"
+      )
+      .lt("amount", 0)
+      .gte("booking_date", inicio.toISOString().slice(0, 10)),
+    supabase.from("merchant_names").select("match_value, display_name"),
+    supabase.from("recurring_exclusions").select("chave"),
+    carregarCoresOverride(supabase),
+  ]);
 
   const nomes = new Map(
     (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
   );
+  const excluidas = new Set((exclusoesRaw ?? []).map((e) => e.chave as string));
 
   const txs: TxRecorrencia[] = ((transacoesRaw ?? []) as unknown as Linha[])
     .map((t) => {
@@ -65,10 +72,23 @@ export default async function RecorrenciasPage() {
     })
     .filter((t): t is TxRecorrencia => t !== null);
 
-  const recorrencias = detetarRecorrencias(txs);
+  const recorrencias = detetarRecorrencias(txs, excluidas);
   const ativas = recorrencias.filter((r) => r.ativa);
   const inativas = recorrencias.filter((r) => !r.ativa);
   const totalMensal = ativas.reduce((s, r) => s + r.mensalEquivalente, 0);
+
+  // Nome apresentável para as escondidas (a partir de uma transação recente)
+  const amostraPorChave = new Map<string, TxRecorrencia>();
+  for (const t of txs) {
+    if (!amostraPorChave.has(t.chave)) amostraPorChave.set(t.chave, t);
+  }
+  const escondidas = [...excluidas].map((chave) => {
+    const a = amostraPorChave.get(chave);
+    return {
+      chave,
+      nome: a ? resolverNome(a.descricao, a.contraparte, nomes) : chave,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
@@ -119,19 +139,23 @@ export default async function RecorrenciasPage() {
               nomes
             );
             return (
-              <Link
+              <div
                 key={r.chave}
-                href={`/comerciante/${encodeURIComponent(r.chave)}`}
-                className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm transition-colors hover:bg-muted/40 active:scale-[0.99]"
+                className="flex items-center gap-2 rounded-2xl border border-border/60 bg-card p-3 shadow-sm"
               >
-                <IconeCategoria icone={r.icone} cor={r.cor} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{nome}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {ROTULO_CADENCIA[r.cadencia]} · próxima{" "}
-                    {formatarData(r.proximaData)}
-                  </p>
-                </div>
+                <Link
+                  href={`/comerciante/${encodeURIComponent(r.chave)}`}
+                  className="flex min-w-0 flex-1 items-center gap-3"
+                >
+                  <IconeCategoria icone={r.icone} cor={r.cor} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{nome}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {ROTULO_CADENCIA[r.cadencia]} · próxima{" "}
+                      {formatarData(r.proximaData)}
+                    </p>
+                  </div>
+                </Link>
                 <div className="flex shrink-0 flex-col items-end gap-0.5">
                   <p className="text-sm font-bold tabular-nums">
                     {formatarEuros(r.valor)}
@@ -157,7 +181,17 @@ export default async function RecorrenciasPage() {
                     </Badge>
                   )}
                 </div>
-              </Link>
+                <form action={excluirRecorrencia}>
+                  <input type="hidden" name="chave" value={r.chave} />
+                  <BotaoSubmit
+                    variant="ghost"
+                    size="icon-sm"
+                    title="Não é gasto fixo"
+                  >
+                    <X className="text-muted-foreground" />
+                  </BotaoSubmit>
+                </form>
+              </div>
             );
           })}
         </div>
@@ -193,6 +227,28 @@ export default async function RecorrenciasPage() {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {escondidas.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="flex items-center gap-1.5 px-1 pt-2 text-sm font-semibold text-muted-foreground">
+            <EyeOff className="size-3.5" /> Escondidas dos gastos fixos
+          </p>
+          {escondidas.map((e) => (
+            <div
+              key={e.chave}
+              className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-card p-2.5 pl-3 text-sm shadow-sm"
+            >
+              <span className="truncate text-muted-foreground">{e.nome}</span>
+              <form action={restaurarRecorrencia}>
+                <input type="hidden" name="chave" value={e.chave} />
+                <BotaoSubmit variant="ghost" size="icon-sm" title="Repor">
+                  <RotateCcw className="text-muted-foreground" />
+                </BotaoSubmit>
+              </form>
+            </div>
+          ))}
         </div>
       )}
     </div>
