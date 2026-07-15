@@ -379,24 +379,31 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Insight: comparação com o mês anterior */}
+      {/* Insight: comparação com o mês anterior → leva à Análise */}
       {comparacao && (
-        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(2)}>
-          <CardContent className="flex items-center gap-3 pt-1">
-            <span
-              className={cn(
-                "flex size-10 shrink-0 items-center justify-center rounded-full",
-                comparacao.diferenca <= 0
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                  : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
-              )}
-            >
-              {comparacao.diferenca <= 0 ? (
-                <TrendingDown className="size-5" />
-              ) : (
-                <TrendingUp className="size-5" />
-              )}
-            </span>
+        <Link
+          href="/analise"
+          className={cn(
+            "flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm transition-all hover:bg-muted/40 active:scale-[0.99]",
+            ANIM
+          )}
+          style={atraso(2)}
+        >
+          <span
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-full",
+              comparacao.diferenca <= 0
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+            )}
+          >
+            {comparacao.diferenca <= 0 ? (
+              <TrendingDown className="size-5" />
+            ) : (
+              <TrendingUp className="size-5" />
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
             <p className="text-sm">
               {comparacao.diferenca <= 0 ? (
                 <>
@@ -412,8 +419,12 @@ export default async function DashboardPage() {
                 </>
               )}
             </p>
-          </CardContent>
-        </Card>
+            <p className="mt-0.5 text-xs font-medium text-primary">
+              Ver análise por categoria
+            </p>
+          </div>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
       )}
 
       {meta && (
