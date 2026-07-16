@@ -16,14 +16,21 @@ import {
   chaveMes,
   compararCategorias,
   compararComerciantes,
+  estatisticasDoMes,
   historicoMensal,
+  porDiaSemana,
   resumoComparativo,
+  splitFixoVariavel,
   type ItemComparado,
   type TipoAnalise,
   type TxAnalise,
 } from "@/lib/analise";
+import {
+  detetarRecorrencias,
+  type TxRecorrencia,
+} from "@/lib/recorrencias";
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
-import { formatarEuros } from "@/lib/format";
+import { formatarData, formatarEuros } from "@/lib/format";
 import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -186,17 +193,24 @@ export default async function AnalisePage({
   inicio.setMonth(inicio.getMonth() - MESES_FETCH);
   inicio.setDate(1);
 
-  const [{ data: transacoesRaw }, { data: nomesRaw }, overrides] =
-    await Promise.all([
-      supabase
-        .from("transactions")
-        .select(
-          "booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
-        )
-        .gte("booking_date", inicio.toISOString().slice(0, 10)),
-      supabase.from("merchant_names").select("match_value, display_name"),
-      carregarCoresOverride(supabase),
-    ]);
+  const [
+    { data: transacoesRaw },
+    { data: nomesRaw },
+    { data: exclusoesRaw },
+    { data: confirmacoesRaw },
+    overrides,
+  ] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select(
+        "booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
+      )
+      .gte("booking_date", inicio.toISOString().slice(0, 10)),
+    supabase.from("merchant_names").select("match_value, display_name"),
+    supabase.from("recurring_exclusions").select("chave"),
+    supabase.from("recurring_confirmations").select("chave"),
+    carregarCoresOverride(supabase),
+  ]);
 
   const nomes = new Map(
     (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
@@ -220,6 +234,35 @@ export default async function AnalisePage({
   const meses = opcoesDeMes();
   const rotuloTipo = tipo === "gastos" ? "Gasto" : "Recebido";
   const baseHref = `/analise?mes=${mes}&tipo=${tipo}`;
+
+  // Estatísticas do mês + fixos vs. variáveis (chaves das recorrências ativas)
+  const stats = estatisticasDoMes(txs, mes, agora, tipo);
+  const txsRec: TxRecorrencia[] = txs
+    .filter((t) => t.chave)
+    .map((t) => ({
+      chave: t.chave!,
+      booking_date: t.booking_date,
+      amount: t.amount,
+      descricao: null,
+      contraparte: null,
+      categoria: t.categoria,
+      cor: t.cor,
+      icone: t.icone,
+    }));
+  const chavesFixas = new Set(
+    detetarRecorrencias(
+      txsRec,
+      new Set((exclusoesRaw ?? []).map((e) => e.chave as string)),
+      new Set((confirmacoesRaw ?? []).map((e) => e.chave as string)),
+      agora
+    )
+      .filter((r) => r.ativa)
+      .map((r) => r.chave)
+  );
+  const split = splitFixoVariavel(txs, mes, chavesFixas, agora);
+  const tendencia = historicoMensal(txs, mesAtual, tipo, 6);
+  const semana = porDiaSemana(txs, tipo);
+  const maxSemana = Math.max(1, ...semana.map((s) => s.valor));
 
   const heroAtual = resumo
     ? tipo === "gastos"
@@ -326,6 +369,155 @@ export default async function AnalisePage({
             )}
           </div>
 
+          {/* Estatísticas rápidas do mês */}
+          <div className="grid grid-cols-3 gap-2">
+            <Card className="border-none shadow-sm">
+              <CardContent className="flex flex-col gap-1 pt-1">
+                <p className="text-[11px] text-muted-foreground">Média/dia</p>
+                <p className="text-sm font-bold tabular-nums">
+                  {formatarEuros(stats.mediaDia)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-sm">
+              <CardContent className="flex flex-col gap-1 pt-1">
+                <p className="text-[11px] text-muted-foreground">
+                  {tipo === "gastos" ? "Compras" : "Entradas"}
+                </p>
+                <p className="text-sm font-bold tabular-nums">
+                  {stats.nTransacoes}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-sm">
+              <CardContent className="flex flex-col gap-1 pt-1">
+                <p className="text-[11px] text-muted-foreground">
+                  {tipo === "gastos" ? "Dias sem gastos" : "Maior entrada"}
+                </p>
+                <p className="text-sm font-bold tabular-nums">
+                  {tipo === "gastos"
+                    ? stats.diasSemGastos
+                    : stats.maior
+                      ? formatarEuros(stats.maior.valor)
+                      : "—"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Maior gasto único do mês */}
+          {tipo === "gastos" && stats.maior && (
+            <Link
+              href={
+                stats.maior.chave
+                  ? `/comerciante/${encodeURIComponent(stats.maior.chave)}`
+                  : baseHref
+              }
+              className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm transition-all hover:bg-muted/40 active:scale-[0.99]"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                <TrendingUp className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">
+                  Maior gasto: {stats.maior.nome}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatarData(stats.maior.data)}
+                </p>
+              </div>
+              <p className="shrink-0 text-sm font-bold tabular-nums">
+                {formatarEuros(stats.maior.valor)}
+              </p>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </Link>
+          )}
+
+          {/* Fixos vs. variáveis */}
+          {tipo === "gastos" && split.total > 0 && (
+            <Card className="border-none shadow-sm">
+              <CardContent className="flex flex-col gap-2 pt-3">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-sm font-medium">Fixos vs. variáveis</p>
+                  <p className="text-xs text-muted-foreground">
+                    {split.pctFixo}% fixos
+                  </p>
+                </div>
+                <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full">
+                  <div
+                    className="h-full rounded-l-full bg-violet-500"
+                    style={{ width: `${Math.max(2, split.pctFixo)}%` }}
+                  />
+                  <div
+                    className="h-full flex-1 rounded-r-full bg-emerald-500"
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>
+                    <span className="font-medium text-violet-600 dark:text-violet-400">
+                      ●
+                    </span>{" "}
+                    Fixos {formatarEuros(split.fixo)}
+                  </span>
+                  <span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      ●
+                    </span>{" "}
+                    Variáveis {formatarEuros(split.variavel)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tendência 6 meses — toca para mudar o mês em análise */}
+          <Card className="border-none shadow-sm">
+            <CardContent className="flex flex-col gap-3 pt-3">
+              <p className="text-sm font-medium">
+                {tipo === "gastos" ? "Gasto" : "Recebido"} · últimos 6 meses
+              </p>
+              <div className="flex items-end justify-between gap-1 pt-1">
+                {tendencia.map((p) => {
+                  const maxTend = Math.max(1, ...tendencia.map((x) => x.valor));
+                  const ativo = p.chave === mes;
+                  return (
+                    <Link
+                      key={p.chave}
+                      href={`/analise?mes=${p.chave}&tipo=${tipo}`}
+                      className="flex flex-1 flex-col items-center gap-1.5 rounded-xl py-1 transition-colors hover:bg-muted/50"
+                    >
+                      <div className="flex h-20 w-full items-end justify-center">
+                        <div
+                          className="w-5 rounded-full transition-all"
+                          style={{
+                            height: `${Math.max(3, (p.valor / maxTend) * 100)}%`,
+                            backgroundColor:
+                              p.valor > 0
+                                ? tipo === "gastos"
+                                  ? "#8b5cf6"
+                                  : "#10b981"
+                                : "var(--muted)",
+                            opacity: ativo || p.valor === 0 ? 1 : 0.4,
+                          }}
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[10px] capitalize",
+                          ativo
+                            ? "font-bold text-foreground"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {p.rotulo}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Ganhos/poupança (contexto) */}
           <div className="grid grid-cols-2 gap-2">
             <Card className="border-none shadow-sm">
@@ -376,6 +568,55 @@ export default async function AnalisePage({
             bomSeSobe={bomSeSobe}
             baseHref={baseHref}
           />
+
+          {/* Hábito: em que dias da semana gastas/recebes mais */}
+          {semana.some((s) => s.valor > 0) && (
+            <Card className="border-none shadow-sm">
+              <CardContent className="flex flex-col gap-3 pt-3">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-sm font-medium">
+                    Em que dias {tipo === "gastos" ? "gastas" : "recebes"} mais
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    últimos {MESES_FETCH} meses
+                  </p>
+                </div>
+                <div className="flex items-end justify-between gap-1 pt-1">
+                  {semana.map((s) => (
+                    <div
+                      key={s.rotulo}
+                      className="flex flex-1 flex-col items-center gap-1.5"
+                    >
+                      <div className="flex h-16 w-full items-end justify-center">
+                        <div
+                          className="w-4 rounded-full"
+                          style={{
+                            height: `${Math.max(3, (s.valor / maxSemana) * 100)}%`,
+                            backgroundColor:
+                              s.valor === maxSemana
+                                ? tipo === "gastos"
+                                  ? "#f43f5e"
+                                  : "#10b981"
+                                : "var(--muted)",
+                          }}
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[10px]",
+                          s.valor === maxSemana
+                            ? "font-bold text-foreground"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {s.rotulo}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <SeccaoComerciantes
             txs={txs}

@@ -290,6 +290,120 @@ export function historicoMensal(
   return pontos;
 }
 
+export interface EstatisticasMes {
+  mediaDia: number; // média por dia decorrido
+  nTransacoes: number;
+  diasSemGastos: number; // dias decorridos sem qualquer gasto
+  maior: { valor: number; nome: string; chave: string | null; data: string } | null;
+}
+
+/**
+ * Estatísticas rápidas do mês alvo (até hoje, se for o atual): média por dia,
+ * nº de transações, dias sem gastos e a maior transação única.
+ */
+export function estatisticasDoMes(
+  txs: TxAnalise[],
+  mesAlvo: string,
+  agora = new Date(),
+  tipo: TipoAnalise = "gastos"
+): EstatisticasMes {
+  const { diaLimite } = alvoInfo(mesAlvo, agora);
+  const [ano, mes] = mesAlvo.split("-").map(Number);
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const diasConsiderados = Math.max(1, Math.min(diaLimite, diasNoMes));
+
+  let total = 0;
+  let n = 0;
+  const diasComMovimento = new Set<number>();
+  let maior: EstatisticasMes["maior"] = null;
+
+  for (const t of txs) {
+    if (t.movimento) continue;
+    if (t.booking_date.slice(0, 7) !== mesAlvo) continue;
+    const v = valorTipo(t.amount, tipo);
+    if (v === 0) continue;
+    const dia = diaDe(t.booking_date);
+    if (dia > diaLimite) continue;
+    total += v;
+    n++;
+    diasComMovimento.add(dia);
+    if (!maior || v > maior.valor) {
+      maior = {
+        valor: R(v),
+        nome: t.nomeComerciante,
+        chave: t.chave,
+        data: t.booking_date,
+      };
+    }
+  }
+
+  return {
+    mediaDia: R(total / diasConsiderados),
+    nTransacoes: n,
+    diasSemGastos: Math.max(0, diasConsiderados - diasComMovimento.size),
+    maior,
+  };
+}
+
+/**
+ * Distribuição por dia da semana (seg→dom) em todo o histórico carregado —
+ * revela hábitos ("gastas mais à sexta") melhor do que um mês isolado.
+ */
+export function porDiaSemana(
+  txs: TxAnalise[],
+  tipo: TipoAnalise = "gastos"
+): { rotulo: string; valor: number }[] {
+  // getDay(): 0=domingo … 6=sábado → reordenar para seg..dom
+  const ROTULOS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+  const somas = [0, 0, 0, 0, 0, 0, 0];
+  for (const t of txs) {
+    if (t.movimento) continue;
+    const v = valorTipo(t.amount, tipo);
+    if (v === 0) continue;
+    const [a, m, d] = t.booking_date.slice(0, 10).split("-").map(Number);
+    const idx = (new Date(a, m - 1, d).getDay() + 6) % 7;
+    somas[idx] += v;
+  }
+  return ROTULOS.map((rotulo, i) => ({ rotulo, valor: R(somas[i]) }));
+}
+
+export interface SplitFixoVariavel {
+  fixo: number;
+  variavel: number;
+  total: number;
+  pctFixo: number; // 0..100
+}
+
+/**
+ * Divide o gasto do mês alvo entre comerciantes fixos (chaves das
+ * recorrências ativas) e o resto — o "fixos vs. variáveis" do Copilot.
+ */
+export function splitFixoVariavel(
+  txs: TxAnalise[],
+  mesAlvo: string,
+  chavesFixas: Set<string>,
+  agora = new Date()
+): SplitFixoVariavel {
+  const { diaLimite } = alvoInfo(mesAlvo, agora);
+  let fixo = 0;
+  let variavel = 0;
+  for (const t of txs) {
+    if (t.movimento || t.amount >= 0) continue;
+    if (t.booking_date.slice(0, 7) !== mesAlvo) continue;
+    if (diaDe(t.booking_date) > diaLimite) continue;
+    const v = -t.amount;
+    if (t.chave && chavesFixas.has(t.chave)) fixo += v;
+    else variavel += v;
+  }
+  const total = fixo + variavel;
+  return {
+    fixo: R(fixo),
+    variavel: R(variavel),
+    total: R(total),
+    pctFixo: total > 0 ? Math.round((fixo / total) * 100) : 0,
+  };
+}
+
 /**
  * Agrega comerciantes por todo o histórico carregado (sem comparação) — para
  * a vista "Todos os meses" do drill-in. Ordenado por total.
