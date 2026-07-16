@@ -3,6 +3,9 @@
 
 export type Cadencia = "weekly" | "monthly" | "yearly";
 
+/** Que lado analisar: gastos fixos (saídas) ou rendimentos (entradas). */
+export type FluxoRecorrencia = "gastos" | "ganhos";
+
 export interface TxRecorrencia {
   chave: string; // chaveDoNome (comerciante)
   booking_date: string;
@@ -58,11 +61,18 @@ export function mensalEquivalenteDe(cadencia: Cadencia, valor: number): number {
   return Math.round(valor * FATOR_MENSAL[cadencia] * 100) / 100;
 }
 
-// Transferências (MB Way, etc.) nunca são gastos fixos — variam por mil razões
+// Transferências (MB Way, etc.) nunca são fixas — variam por mil razões
 const CATEGORIAS_NUNCA_FIXAS = new Set([
   "Transferências",
   "Transferências recebidas",
 ]);
+
+// Categoria com regras mais tolerantes em cada lado (para nunca falhar uma
+// subscrição real nem um salário que varia um pouco)
+const CATEGORIA_TOLERANTE: Record<FluxoRecorrencia, string> = {
+  gastos: "Subscrições",
+  ganhos: "Salário",
+};
 
 function coefVariacao(nums: number[]): number {
   const media = nums.reduce((s, n) => s + n, 0) / nums.length;
@@ -83,11 +93,13 @@ export function detetarRecorrencias(
   transacoes: TxRecorrencia[],
   chavesExcluidas: Set<string> = new Set(),
   chavesConfirmadas: Set<string> = new Set(),
-  agora = new Date()
+  agora = new Date(),
+  fluxo: FluxoRecorrencia = "gastos"
 ): Recorrencia[] {
   const grupos = new Map<string, TxRecorrencia[]>();
   for (const t of transacoes) {
-    if (t.amount >= 0 || !t.chave) continue;
+    const relevante = fluxo === "gastos" ? t.amount < 0 : t.amount > 0;
+    if (!relevante || !t.chave) continue;
     if (chavesExcluidas.has(t.chave)) continue;
     const g = grupos.get(t.chave) ?? [];
     g.push(t);
@@ -116,8 +128,9 @@ export function detetarRecorrencias(
     if (valMediano <= 0) continue;
     const cvValores = coefVariacao(valores);
 
-    const eSubscricao = categoria === "Subscrições" || cvValores <= 0.06;
-    const minOcorr = eSubscricao ? 2 : 3;
+    const eRegular =
+      categoria === CATEGORIA_TOLERANTE[fluxo] || cvValores <= 0.06;
+    const minOcorr = eRegular ? 2 : 3;
     if (!confirmada && lista.length < minOcorr) continue;
 
     const datas = ordenadas.map((t) => new Date(t.booking_date).getTime());
@@ -135,11 +148,11 @@ export function detetarRecorrencias(
 
       // Intervalos regulares (subscrição cai ~no mesmo dia; restaurante não)
       if (gaps.length >= 2) {
-        const limiteGap = eSubscricao ? 0.6 : 0.4;
+        const limiteGap = eRegular ? 0.6 : 0.4;
         if (coefVariacao(gaps) > limiteGap) continue;
       }
 
-      const limiteValor = eSubscricao ? 0.4 : 0.15;
+      const limiteValor = eRegular ? 0.4 : 0.15;
       if (cvValores > limiteValor) continue;
     } else {
       cadencia = cadencia ?? "monthly";

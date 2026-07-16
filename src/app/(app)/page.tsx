@@ -2,8 +2,6 @@ import Link from "next/link";
 import {
   Banknote,
   ChevronRight,
-  HandCoins,
-  PiggyBank,
   Repeat,
   TrendingDown,
   TrendingUp,
@@ -32,12 +30,16 @@ import {
   gastosPorCategoria,
   resumoDoMes,
   serieDeSaldo,
-  somaDoMesPorCategoria,
   topGastosDoMes,
   type TransacaoDash,
 } from "@/lib/dashboard";
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
-import { diasAte, formatarEuros } from "@/lib/format";
+import { diasAte, formatarData, formatarEuros } from "@/lib/format";
+import {
+  proximoRendimento,
+  proximosEventos,
+  type FonteRecorrente,
+} from "@/lib/futuro";
 import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
 import {
   detetarRecorrencias,
@@ -141,7 +143,11 @@ export default async function DashboardPage() {
     supabase.from("debts").select("direction, amount").eq("settled", false),
     supabase.from("recurring_exclusions").select("chave"),
     supabase.from("recurring_confirmations").select("chave"),
-    supabase.from("recurring_manual").select("amount, cadence"),
+    supabase
+      .from("recurring_manual")
+      .select(
+        "id, name, amount, cadence, next_date, category_id, categories (name, color, icon)"
+      ),
     carregarCoresOverride(supabase),
   ]);
 
@@ -216,8 +222,6 @@ export default async function DashboardPage() {
     ])
   ) as Record<Intervalo, { dia: string; saldo: number }[]>;
   const sparkline = seriesSaldo["1m"];
-  const salarioMes = somaDoMesPorCategoria(transacoes, "Salário");
-  const tarefasMes = somaDoMesPorCategoria(transacoes, "Tarefas");
   const topGastos = topGastosDoMes(transacoes, 5);
   const comparacao = comparacaoComMesAnterior(transacoes);
 
@@ -251,7 +255,7 @@ export default async function DashboardPage() {
         descricao: t.description,
         contraparte: t.counterparty,
         categoria: t.categories?.name ?? null,
-        cor: null,
+        cor: corCategoria(overrides, t.category_id, t.categories?.color),
         icone: t.categories?.icon ?? null,
       };
     })
@@ -261,9 +265,23 @@ export default async function DashboardPage() {
     excluidasRec,
     confirmadasRec
   ).filter((r) => r.ativa);
-  const manualRec = (manualRecRaw ?? []) as {
+  // Rendimentos recorrentes (salário, tarefas regulares…) — mesmo motor,
+  // do lado das entradas
+  const rendimentosAtivos = detetarRecorrencias(
+    txsRecorrencia,
+    excluidasRec,
+    confirmadasRec,
+    new Date(),
+    "ganhos"
+  ).filter((r) => r.ativa);
+  const manualRec = (manualRecRaw ?? []) as unknown as {
+    id: string;
+    name: string;
     amount: string;
     cadence: "weekly" | "monthly" | "yearly";
+    next_date: string | null;
+    category_id: string | null;
+    categories: { name: string; color: string | null; icon: string | null } | null;
   }[];
   const nFixos = recorrenciasAtivas.length + manualRec.length;
   const totalFixoMensal =
@@ -272,6 +290,45 @@ export default async function DashboardPage() {
       (s, m) => s + mensalEquivalenteDe(m.cadence, Number(m.amount)),
       0
     );
+
+  // O que aí vem: gastos fixos (detetados + manuais) e rendimentos esperados
+  const fontesFuturas: FonteRecorrente[] = [
+    ...recorrenciasAtivas.map((r) => ({
+      id: `auto-${r.chave}`,
+      nome: resolverNome(r.descricaoAmostra, r.contraparteAmostra, nomes),
+      valor: r.valor,
+      cadencia: r.cadencia,
+      proximaData: r.proximaData,
+      cor: r.cor,
+      icone: r.icone,
+      entrada: false,
+    })),
+    ...manualRec
+      .filter((m) => m.next_date)
+      .map((m) => ({
+        id: `man-${m.id}`,
+        nome: m.name,
+        valor: Number(m.amount),
+        cadencia: m.cadence,
+        proximaData: m.next_date!,
+        cor: corCategoria(overrides, m.category_id, m.categories?.color),
+        icone: m.categories?.icon ?? "repeat",
+        entrada: false,
+      })),
+    ...rendimentosAtivos.map((r) => ({
+      id: `in-${r.chave}`,
+      nome: resolverNome(r.descricaoAmostra, r.contraparteAmostra, nomes),
+      valor: r.valor,
+      cadencia: r.cadencia,
+      proximaData: r.proximaData,
+      cor: r.cor,
+      icone: r.icone,
+      entrada: true,
+    })),
+  ];
+  const eventosFuturos = proximosEventos(fontesFuturas, new Date(), 30);
+  const proxRendimento = proximoRendimento(eventosFuturos);
+  const proximos = eventosFuturos.slice(0, 5);
 
   const aRenovar = (ligacoes ?? []).filter(
     (ligacao) => diasAte(ligacao.valid_until) <= 14
@@ -340,45 +397,79 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Cartões de resumo */}
-      <div className={cn("grid grid-cols-3 gap-2", ANIM)} style={atraso(1)}>
-        {[
-          {
-            rotulo: "Salário",
-            valor: formatarEuros(salarioMes),
-            icon: Banknote,
-            cor: "#16a34a",
-          },
-          {
-            rotulo: "Tarefas",
-            valor: formatarEuros(tarefasMes),
-            icon: HandCoins,
-            cor: "#f59e0b",
-          },
-          {
-            rotulo: "Poupança",
-            valor:
-              resumo.taxaPoupanca === null ? "—" : `${resumo.taxaPoupanca}%`,
-            icon: PiggyBank,
-            cor: "#8b5cf6",
-          },
-        ].map(({ rotulo, valor, icon: Icon, cor }) => (
-          <Card key={rotulo} className="border-none shadow-sm">
-            <CardContent className="flex flex-col gap-2 pt-1">
-              <span
-                className="flex size-8 items-center justify-center rounded-full"
-                style={{ backgroundColor: `${cor}1f`, color: cor }}
+      {/* Próximo rendimento a entrar (detetado pelo padrão) */}
+      {proxRendimento && (
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(1)}>
+          <CardContent className="flex items-center gap-3 pt-1">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Banknote className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">
+                {proxRendimento.dias === 0
+                  ? "Entra hoje"
+                  : proxRendimento.dias === 1
+                    ? "Entra amanhã"
+                    : `Faltam ${proxRendimento.dias} dias`}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {proxRendimento.nome} · {formatarData(proxRendimento.data)}
+              </p>
+            </div>
+            <p className="shrink-0 text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+              ~{formatarEuros(proxRendimento.valor)}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* O que aí vem nos próximos 30 dias */}
+      {proximos.length > 0 && (
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(1)}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-sm">
+              Próximos
+              <Link
+                href="/recorrencias"
+                className="text-xs font-medium text-primary"
               >
-                <Icon className="size-4" />
-              </span>
-              <div>
-                <p className="text-[11px] text-muted-foreground">{rotulo}</p>
-                <p className="text-sm font-bold tabular-nums">{valor}</p>
+                Gastos fixos →
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {proximos.map((e) => (
+              <div key={e.id} className="flex items-center gap-3">
+                <IconeCategoria
+                  icone={e.icone}
+                  cor={e.cor}
+                  ganho={e.entrada}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{e.nome}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {e.dias === 0
+                      ? "hoje"
+                      : e.dias === 1
+                        ? "amanhã"
+                        : `em ${e.dias} dias`}{" "}
+                    · {formatarData(e.data)}
+                  </p>
+                </div>
+                <p
+                  className={cn(
+                    "shrink-0 text-sm font-semibold tabular-nums",
+                    e.entrada && "text-emerald-600 dark:text-emerald-400"
+                  )}
+                >
+                  {e.entrada ? "+" : ""}
+                  {formatarEuros(e.valor)}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Insight: comparação com o mês anterior → leva à Análise */}
       {comparacao && (
