@@ -1,20 +1,9 @@
 import Link from "next/link";
-import {
-  ArrowLeft,
-  BadgeCheck,
-  EyeOff,
-  Plus,
-  Repeat,
-  RotateCcw,
-  Trash2,
-  TrendingUp,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Plus, Repeat, Trash2, X } from "lucide-react";
 import { BotaoSubmit } from "@/components/botao-submit";
 import { FormularioRecorrencia } from "@/components/form/formulario-recorrencia";
 import { IconeCategoria } from "@/components/icone-categoria";
 import { ModalSheet } from "@/components/modal-sheet";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { formatarData, formatarEuros } from "@/lib/format";
@@ -27,12 +16,7 @@ import {
   type TxRecorrencia,
 } from "@/lib/recorrencias";
 import { createClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
-import {
-  apagarRecorrenciaManual,
-  excluirRecorrencia,
-  restaurarRecorrencia,
-} from "./actions";
+import { apagarRecorrenciaManual, excluirRecorrencia } from "./actions";
 
 interface ItemFixo {
   id: string;
@@ -134,7 +118,6 @@ export default async function RecorrenciasPage({
     .filter((t): t is TxRecorrencia => t !== null);
 
   const recorrencias = detetarRecorrencias(txs, excluidas, confirmadas);
-  const inativas = recorrencias.filter((r) => !r.ativa);
 
   const fixosAuto: ItemFixo[] = recorrencias
     .filter((r) => r.ativa)
@@ -183,19 +166,6 @@ export default async function RecorrenciasPage({
   );
   const totalMensal = fixos.reduce((s, r) => s + r.mensalEquivalente, 0);
 
-  // Nome apresentável para as escondidas (a partir de uma transação recente)
-  const amostraPorChave = new Map<string, TxRecorrencia>();
-  for (const t of txs) {
-    if (!amostraPorChave.has(t.chave)) amostraPorChave.set(t.chave, t);
-  }
-  const escondidas = [...excluidas].map((chave) => {
-    const a = amostraPorChave.get(chave);
-    return {
-      chave,
-      nome: a ? resolverNome(a.descricao, a.contraparte, nomes) : chave,
-    };
-  });
-
   return (
     <div className="flex flex-col gap-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       <div className="flex items-center gap-2">
@@ -243,12 +213,7 @@ export default async function RecorrenciasPage({
               <>
                 <IconeCategoria icone={r.icone} cor={r.cor} />
                 <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
-                    {r.nome}
-                    {r.confirmada && (
-                      <BadgeCheck className="size-3.5 shrink-0 text-primary" />
-                    )}
-                  </p>
+                  <p className="truncate text-sm font-semibold">{r.nome}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {ROTULO_CADENCIA[r.cadencia]}
                     {r.proximaData
@@ -275,28 +240,9 @@ export default async function RecorrenciasPage({
                     {conteudo}
                   </div>
                 )}
-                <div className="flex shrink-0 flex-col items-end gap-0.5">
-                  <p className="text-sm font-bold tabular-nums">
-                    {formatarEuros(r.valor)}
-                  </p>
-                  {r.deltaPreco !== null && (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "gap-0.5",
-                        r.deltaPreco > 0
-                          ? "border-rose-500/40 text-rose-600 dark:text-rose-400"
-                          : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
-                      )}
-                    >
-                      <TrendingUp
-                        className={cn("size-3", r.deltaPreco < 0 && "rotate-180")}
-                      />
-                      {r.deltaPreco > 0 ? "+" : ""}
-                      {formatarEuros(r.deltaPreco)}
-                    </Badge>
-                  )}
-                </div>
+                <p className="shrink-0 text-sm font-bold tabular-nums">
+                  {formatarEuros(r.valor)}
+                </p>
                 {r.tipo === "auto" ? (
                   <form action={excluirRecorrencia}>
                     <input type="hidden" name="chave" value={r.chave} />
@@ -319,61 +265,6 @@ export default async function RecorrenciasPage({
               </div>
             );
           })}
-        </div>
-      )}
-
-      {inativas.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="px-1 pt-2 text-sm font-semibold text-muted-foreground">
-            Já não ativas
-          </p>
-          {inativas.map((r) => {
-            const nome = resolverNome(
-              r.descricaoAmostra,
-              r.contraparteAmostra,
-              nomes
-            );
-            return (
-              <Link
-                key={r.chave}
-                href={`/comerciante/${encodeURIComponent(r.chave)}`}
-                className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 opacity-70 shadow-sm transition-colors hover:bg-muted/40"
-              >
-                <IconeCategoria icone={r.icone} cor={r.cor} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{nome}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    Última {formatarData(r.ultimaData)}
-                  </p>
-                </div>
-                <p className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
-                  {formatarEuros(r.valor)}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
-      {escondidas.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="flex items-center gap-1.5 px-1 pt-2 text-sm font-semibold text-muted-foreground">
-            <EyeOff className="size-3.5" /> Escondidas dos gastos fixos
-          </p>
-          {escondidas.map((e) => (
-            <div
-              key={e.chave}
-              className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-card p-2.5 pl-3 text-sm shadow-sm"
-            >
-              <span className="truncate text-muted-foreground">{e.nome}</span>
-              <form action={restaurarRecorrencia}>
-                <input type="hidden" name="chave" value={e.chave} />
-                <BotaoSubmit variant="ghost" size="icon-sm" title="Repor">
-                  <RotateCcw className="text-muted-foreground" />
-                </BotaoSubmit>
-              </form>
-            </div>
-          ))}
         </div>
       )}
 
