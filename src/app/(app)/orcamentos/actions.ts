@@ -21,13 +21,16 @@ export async function criarOrcamento(formData: FormData) {
     redirect("/login");
   }
 
+  const agora = new Date();
   const { error } = await supabase.from("budgets").insert({
     user_id: user.id,
     category_id: categoriaId === "global" ? null : categoriaId,
     amount: valor.toFixed(2),
     period,
     // Ancorar a janela ao dia de criação (semana/mês/ano rolam a partir daqui)
-    start_date: new Date().toISOString().slice(0, 10),
+    start_date: agora.toISOString().slice(0, 10),
+    // Instante exato: só conta o que entrar na app a partir daqui
+    start_at: agora.toISOString(),
   });
 
   if (error) {
@@ -61,6 +64,7 @@ export async function atualizarOrcamento(formData: FormData) {
     .eq("id", orcamentoId)
     .maybeSingle();
   const mudouPeriodo = atual?.period !== period;
+  const agora = new Date();
 
   const { error } = await supabase
     .from("budgets")
@@ -69,8 +73,12 @@ export async function atualizarOrcamento(formData: FormData) {
       period,
       // limite mudou → os limiares de alerta recomeçam
       alert_level: 0,
+      // período novo → janela reancorada e a contar do zero a partir de agora
       ...(mudouPeriodo
-        ? { start_date: new Date().toISOString().slice(0, 10) }
+        ? {
+            start_date: agora.toISOString().slice(0, 10),
+            start_at: agora.toISOString(),
+          }
         : {}),
     })
     .eq("id", orcamentoId);

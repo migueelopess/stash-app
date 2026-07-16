@@ -80,6 +80,7 @@ interface LinhaTransacao {
   category_id: string | null;
   is_movement: boolean;
   custom_name: string | null;
+  created_at: string | null;
   categories: {
     name: string;
     color: string | null;
@@ -119,7 +120,7 @@ export default async function DashboardPage() {
     supabase
       .from("transactions")
       .select(
-        "id, booking_date, amount, description, counterparty, category_id, is_movement, custom_name, categories (name, color, icon)"
+        "id, booking_date, amount, description, counterparty, category_id, is_movement, custom_name, created_at, categories (name, color, icon)"
       )
       .gte("booking_date", inicioHistorico.toISOString().slice(0, 10))
       .order("booking_date"),
@@ -229,6 +230,7 @@ export default async function DashboardPage() {
       booking_date: t.booking_date,
       amount: Number(t.amount),
       category_id: t.category_id,
+      created_at: t.created_at,
     }));
   const estadosOrcamentos = (
     (orcamentosRaw ?? []) as unknown as OrcamentoComCategoria[]

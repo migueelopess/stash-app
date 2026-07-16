@@ -64,11 +64,11 @@ export default async function OrcamentosPage({
     supabase
       .from("budgets")
       .select(
-        "id, category_id, amount, period, start_date, categories (name, color, icon)"
+        "id, category_id, amount, period, start_date, start_at, categories (name, color, icon)"
       ),
     supabase
       .from("transactions")
-      .select("booking_date, amount, category_id")
+      .select("booking_date, amount, category_id, created_at")
       .lt("amount", 0)
       .eq("is_movement", false)
       .gte("booking_date", inicioAno),
@@ -98,6 +98,7 @@ export default async function OrcamentosPage({
       booking_date: t.booking_date,
       amount: Number(t.amount),
       category_id: t.category_id ?? null,
+      created_at: t.created_at,
     })
   );
 

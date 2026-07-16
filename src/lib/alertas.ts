@@ -27,7 +27,7 @@ export async function verificarAlertasDeOrcamentos(
     const { data: orcamentosRaw } = await supabase
       .from("budgets")
       .select(
-        "id, category_id, amount, period, start_date, alert_level, alert_period, categories (name, color, icon)"
+        "id, category_id, amount, period, start_date, start_at, alert_level, alert_period, categories (name, color, icon)"
       )
       .eq("user_id", userId);
 
@@ -41,7 +41,7 @@ export async function verificarAlertasDeOrcamentos(
     const inicioAno = `${new Date().getFullYear()}-01-01`;
     const { data: transacoesRaw } = await supabase
       .from("transactions")
-      .select("booking_date, amount, category_id, accounts!inner(bank_connections!inner(user_id))")
+      .select("booking_date, amount, category_id, created_at, accounts!inner(bank_connections!inner(user_id))")
       .lt("amount", 0)
       .eq("is_movement", false)
       .gte("booking_date", inicioAno)
@@ -52,6 +52,7 @@ export async function verificarAlertasDeOrcamentos(
         booking_date: t.booking_date as string,
         amount: Number(t.amount),
         category_id: (t.category_id as string | null) ?? null,
+        created_at: t.created_at as string | null,
       })
     );
 

@@ -8,6 +8,9 @@ export interface OrcamentoComCategoria {
   amount: number;
   period: Periodo;
   start_date: string; // âncora: a janela rola a partir deste dia (ISO)
+  /** Instante exato da criação — tudo o que já estava na app nessa altura
+   *  não conta, para o orçamento começar vazio. */
+  start_at?: string | null;
   categories: { name: string; color: string | null; icon: string | null } | null;
 }
 
@@ -15,6 +18,8 @@ export interface TransacaoParaOrcamento {
   booking_date: string;
   amount: number;
   category_id: string | null;
+  /** Momento em que a transação entrou na app (sync). O banco não dá hora. */
+  created_at?: string | null;
 }
 
 export interface EstadoOrcamento {
@@ -113,6 +118,15 @@ export function estadoDoOrcamento(
   let gasto = 0;
   for (const t of transacoes) {
     if (t.amount >= 0 || t.booking_date < inicioIso) continue;
+    // Arranque vazio: o que já estava na app quando o orçamento foi criado
+    // nunca conta (ex.: compras de ontem que só hoje caíram na conta).
+    if (
+      orcamento.start_at &&
+      t.created_at &&
+      t.created_at < orcamento.start_at
+    ) {
+      continue;
+    }
     if (
       orcamento.category_id !== null &&
       t.category_id !== orcamento.category_id
