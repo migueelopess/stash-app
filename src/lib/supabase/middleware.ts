@@ -25,11 +25,14 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Não remover: manter o getUser() entre createServerClient e a resposta
+  // Não remover: manter a validação entre createServerClient e a resposta
   // evita sessões desincronizadas e logouts aleatórios.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() valida o JWT localmente (WebCrypto + JWKS em cache) quando o
+  // projeto usa chaves assimétricas — sem ida à rede em cada pedido, ao
+  // contrário do getUser(). Com chave simétrica cai no mesmo comportamento
+  // do getUser(), portanto nunca é mais lento. Renova a sessão se expirou.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims;
 
   const isPublicPath =
     request.nextUrl.pathname.startsWith("/login") ||

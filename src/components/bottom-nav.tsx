@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   ArrowLeftRight,
   ChartColumn,
@@ -21,9 +22,18 @@ const items = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const activeIndex = items.findIndex((it) =>
+  // Estado otimista: ao tocar, a pílula salta já para o item tocado sem
+  // esperar pela resposta do servidor. Quando o pathname muda de facto,
+  // volta a mandar o URL real.
+  const [otimista, setOtimista] = useState<number | null>(null);
+  useEffect(() => {
+    setOtimista(null);
+  }, [pathname]);
+
+  const indiceDoPath = items.findIndex((it) =>
     it.href === "/" ? pathname === "/" : pathname.startsWith(it.href)
   );
+  const activeIndex = otimista ?? indiceDoPath;
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -43,8 +53,9 @@ export function BottomNav() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
+              onClick={() => setOtimista(i)}
               className={cn(
-                "relative z-10 flex flex-col items-center gap-1 rounded-3xl py-2 text-[10px] font-medium transition-colors duration-200",
+                "relative z-10 flex touch-manipulation select-none flex-col items-center gap-1 rounded-3xl py-2 text-[10px] font-medium transition-[color,transform] duration-200 active:scale-90",
                 active
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
