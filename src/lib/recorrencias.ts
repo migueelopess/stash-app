@@ -166,6 +166,9 @@ export function detetarRecorrencias(
     const ativa =
       confirmada || agora.getTime() - ultimaMs < gapMediano * DIA_MS * 1.6;
 
+    // O valor a mostrar é o da ÚLTIMA cobrança (as subscrições sobem de preço;
+    // a mediana ficava "presa" nos valores antigos). A mediana continua a
+    // servir só para detetar o padrão.
     const penultimo = valores[valores.length - 2];
     const ultimoVal = valores[valores.length - 1];
     const delta = ultimoVal - penultimo;
@@ -174,6 +177,7 @@ export function detetarRecorrencias(
         ? Math.round(delta * 100) / 100
         : null;
 
+    const valorAtual = Math.round(ultimoVal * 100) / 100;
     resultado.push({
       chave,
       descricaoAmostra: ultima.descricao,
@@ -181,7 +185,7 @@ export function detetarRecorrencias(
       categoria: ultima.categoria,
       cor: ultima.cor,
       icone: ultima.icone,
-      valor: Math.round(valMediano * 100) / 100,
+      valor: valorAtual,
       cadencia,
       ultimaData: ultima.booking_date,
       proximaData: new Date(proximaMs).toISOString().slice(0, 10),
@@ -190,7 +194,7 @@ export function detetarRecorrencias(
       confirmada,
       deltaPreco,
       mensalEquivalente:
-        Math.round(valMediano * FATOR_MENSAL[cadencia] * 100) / 100,
+        Math.round(valorAtual * FATOR_MENSAL[cadencia] * 100) / 100,
     });
   }
 

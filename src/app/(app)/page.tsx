@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   Banknote,
   ChevronRight,
-  Repeat,
   TrendingDown,
   TrendingUp,
   TriangleAlert,
@@ -41,11 +40,7 @@ import {
   type FonteRecorrente,
 } from "@/lib/futuro";
 import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
-import {
-  detetarRecorrencias,
-  mensalEquivalenteDe,
-  type TxRecorrencia,
-} from "@/lib/recorrencias";
+import { detetarRecorrencias, type TxRecorrencia } from "@/lib/recorrencias";
 import {
   COLUNAS_ORCAMENTO,
   CORES_NIVEL,
@@ -283,13 +278,6 @@ export default async function DashboardPage() {
     category_id: string | null;
     categories: { name: string; color: string | null; icon: string | null } | null;
   }[];
-  const nFixos = recorrenciasAtivas.length + manualRec.length;
-  const totalFixoMensal =
-    recorrenciasAtivas.reduce((s, r) => s + r.mensalEquivalente, 0) +
-    manualRec.reduce(
-      (s, m) => s + mensalEquivalenteDe(m.cadence, Number(m.amount)),
-      0
-    );
 
   // O que aí vem: gastos fixos (detetados + manuais) e rendimentos esperados
   const fontesFuturas: FonteRecorrente[] = [
@@ -582,29 +570,6 @@ export default async function DashboardPage() {
             })}
           </CardContent>
         </Card>
-      )}
-
-      {totalFixoMensal > 0 && (
-        <Link
-          href="/recorrencias"
-          className={cn(
-            "flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm transition-all hover:bg-muted/40 active:scale-[0.99]",
-            ANIM
-          )}
-          style={atraso(4)}
-        >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400">
-            <Repeat className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">Gastos fixos</span>
-            <span className="block text-xs text-muted-foreground">
-              {nFixos} {nFixos === 1 ? "recorrência" : "recorrências"} ·{" "}
-              {formatarEuros(totalFixoMensal)}/mês
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Link>
       )}
 
       {(totalReceber > 0 || totalPagar > 0) && (
