@@ -1,10 +1,10 @@
 import Link from "next/link";
 import {
-  Banknote,
   ChevronRight,
   TrendingDown,
   TrendingUp,
   TriangleAlert,
+  Wallet,
 } from "lucide-react";
 import { BarraProgresso } from "@/components/barra-progresso";
 import { ContadorEuros } from "@/components/contador-euros";
@@ -14,6 +14,7 @@ import {
   GraficoSaldoIntervalos,
   type Intervalo,
 } from "@/components/graficos/grafico-saldo-intervalos";
+import { GraficoPrevisao } from "@/components/graficos/grafico-previsao";
 import { GraficoSparkline } from "@/components/graficos/grafico-sparkline";
 import { IconeCategoria } from "@/components/icone-categoria";
 import {
@@ -35,8 +36,9 @@ import {
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { diasAte, formatarData, formatarEuros } from "@/lib/format";
 import {
-  proximoRendimento,
+  previsaoSaldo,
   proximosEventos,
+  safeToSpend,
   type FonteRecorrente,
 } from "@/lib/futuro";
 import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
@@ -315,8 +317,10 @@ export default async function DashboardPage() {
     })),
   ];
   const eventosFuturos = proximosEventos(fontesFuturas, new Date(), 30);
-  const proxRendimento = proximoRendimento(eventosFuturos);
   const proximos = eventosFuturos.slice(0, 5);
+  const safe = safeToSpend(saldoTotal, eventosFuturos);
+  const previsao = previsaoSaldo(saldoTotal, eventosFuturos, new Date(), 30);
+  const previsaoNegativa = previsao.minimo.saldo < 0;
 
   const aRenovar = (ligacoes ?? []).filter(
     (ligacao) => diasAte(ligacao.valid_until) <= 14
@@ -385,31 +389,46 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Próximo rendimento a entrar (detetado pelo padrão) */}
-      {proxRendimento && (
-        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(1)}>
-          <CardContent className="flex items-center gap-3 pt-1">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <Banknote className="size-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">
-                {proxRendimento.dias === 0
-                  ? "Entra hoje"
-                  : proxRendimento.dias === 1
-                    ? "Entra amanhã"
-                    : `Faltam ${proxRendimento.dias} dias`}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {proxRendimento.nome} · {formatarData(proxRendimento.data)}
-              </p>
-            </div>
-            <p className="shrink-0 text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-              ~{formatarEuros(proxRendimento.valor)}
+      {/* Safe-to-spend: quanto podes gastar por dia até ao próximo rendimento */}
+      <div
+        className={cn(
+          "rounded-3xl border border-border/60 bg-card p-5 shadow-sm",
+          ANIM
+        )}
+        style={atraso(1)}
+      >
+        <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Wallet className="size-4" /> Podes gastar
+        </p>
+        {safe.emRisco ? (
+          <>
+            <p className="mt-1 text-3xl font-extrabold tabular-nums tracking-tight text-rose-600 dark:text-rose-400">
+              Cuidado
             </p>
-          </CardContent>
-        </Card>
-      )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Os gastos fixos por vir ({formatarEuros(safe.reserva)}){" "}
+              {safe.proximoRendimento
+                ? "já não cabem no saldo até ao próximo rendimento."
+                : "já não cabem no saldo até ao fim do mês."}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-4xl font-extrabold tabular-nums tracking-tight">
+              ~{formatarEuros(safe.porDia)}
+              <span className="text-lg font-semibold text-muted-foreground">
+                /dia
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {safe.proximoRendimento
+                ? `até ${safe.proximoRendimento.nome.toLowerCase()} (faltam ${safe.dias} ${safe.dias === 1 ? "dia" : "dias"})`
+                : `até ao fim do mês (${safe.dias} ${safe.dias === 1 ? "dia" : "dias"})`}{" "}
+              · {formatarEuros(safe.disponivel)} disponíveis
+            </p>
+          </>
+        )}
+      </div>
 
       {/* O que aí vem nos próximos 30 dias */}
       {proximos.length > 0 && (
@@ -455,6 +474,49 @@ export default async function DashboardPage() {
                 </p>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Previsão do saldo nos próximos 30 dias */}
+      {proximos.length > 0 && (
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(2)}>
+          <CardHeader>
+            <CardTitle className="text-sm">Previsão · 30 dias</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <GraficoPrevisao
+              pontos={previsao.pontos}
+              negativo={previsaoNegativa}
+            />
+            {previsaoNegativa ? (
+              previsao.temRendimento ? (
+                <p className="flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400">
+                  <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    Por volta de {formatarData(previsao.minimo.data)} o saldo
+                    pode chegar a{" "}
+                    <strong>{formatarEuros(previsao.minimo.saldo)}</strong>.
+                  </span>
+                </p>
+              ) : (
+                <p className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400">
+                  <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    Só com o previsto, o saldo desce até{" "}
+                    <strong>{formatarEuros(previsao.minimo.saldo)}</strong> a{" "}
+                    {formatarData(previsao.minimo.data)} — conta com os teus
+                    rendimentos.
+                  </span>
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Ponto mais baixo: {formatarEuros(previsao.minimo.saldo)} a{" "}
+                {formatarData(previsao.minimo.data)} · fim do mês ~
+                {formatarEuros(previsao.final.saldo)}
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

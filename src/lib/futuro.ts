@@ -98,3 +98,113 @@ export function proximosEventos(
 export function proximoRendimento(eventos: EventoFuturo[]): EventoFuturo | null {
   return eventos.find((e) => e.entrada) ?? null;
 }
+
+const R = (n: number) => Math.round(n * 100) / 100;
+
+export interface SafeToSpend {
+  disponivel: number; // saldo menos os fixos por vir (nunca negativo)
+  porDia: number;
+  porSemana: number;
+  dias: number; // dias no horizonte
+  reserva: number; // gastos fixos reservados no horizonte
+  proximoRendimento: EventoFuturo | null;
+  ateFimDoMes: boolean; // horizonte = fim do mês (sem rendimento detetado)
+  emRisco: boolean; // os fixos por vir já não cabem no saldo
+}
+
+/**
+ * Quanto se pode gastar por dia até ao próximo rendimento (ou até ao fim do
+ * mês, se não houver rendimento detetado), depois de reservar os gastos fixos
+ * que caem nesse intervalo. Feito para rendimento irregular.
+ */
+export function safeToSpend(
+  saldo: number,
+  eventos: EventoFuturo[],
+  agora = new Date(),
+  horizonteMaxDias = 45
+): SafeToSpend {
+  const proxRend = eventos.find((e) => e.entrada && e.dias >= 1) ?? null;
+
+  let dias: number;
+  let ateFimDoMes = false;
+  if (proxRend) {
+    dias = proxRend.dias;
+  } else {
+    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0);
+    dias = Math.min(
+      horizonteMaxDias,
+      Math.max(1, Math.round((fimMes.getTime() - hoje.getTime()) / DIA_MS))
+    );
+    ateFimDoMes = true;
+  }
+
+  const reserva = eventos
+    .filter((e) => !e.entrada && e.dias <= dias)
+    .reduce((s, e) => s + Math.abs(e.valor), 0);
+
+  const disponivel = Math.max(0, saldo - reserva);
+  const porDia = R(disponivel / dias);
+
+  return {
+    disponivel: R(disponivel),
+    porDia,
+    porSemana: R(porDia * 7),
+    dias,
+    reserva: R(reserva),
+    proximoRendimento: proxRend,
+    ateFimDoMes,
+    emRisco: saldo - reserva < 0,
+  };
+}
+
+export interface PontoPrevisao {
+  data: string;
+  dias: number;
+  saldo: number;
+}
+
+export interface PrevisaoSaldo {
+  pontos: PontoPrevisao[];
+  minimo: PontoPrevisao;
+  final: PontoPrevisao;
+  temRendimento: boolean;
+}
+
+/**
+ * Projeta o saldo dia a dia a partir de hoje, aplicando os eventos futuros
+ * (fixos saem, rendimentos entram). Devolve a série e o ponto mais baixo.
+ */
+export function previsaoSaldo(
+  saldo: number,
+  eventos: EventoFuturo[],
+  agora = new Date(),
+  horizonteDias = 30
+): PrevisaoSaldo {
+  const porDia = new Map<number, number>();
+  for (const e of eventos) {
+    if (e.dias < 0 || e.dias > horizonteDias) continue;
+    porDia.set(e.dias, (porDia.get(e.dias) ?? 0) + e.valor);
+  }
+
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const pontos: PontoPrevisao[] = [];
+  let corrente = saldo;
+  let minimo: PontoPrevisao = { data: iso(hoje), dias: 0, saldo: R(saldo) };
+
+  for (let d = 0; d <= horizonteDias; d++) {
+    corrente += porDia.get(d) ?? 0;
+    const dt = new Date(hoje);
+    dt.setDate(dt.getDate() + d);
+    const p: PontoPrevisao = { data: iso(dt), dias: d, saldo: R(corrente) };
+    pontos.push(p);
+    if (p.saldo < minimo.saldo) minimo = p;
+  }
+
+  return {
+    pontos,
+    minimo,
+    final: pontos[pontos.length - 1],
+    temRendimento: eventos.some((e) => e.entrada),
+  };
+}
