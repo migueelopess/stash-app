@@ -2,6 +2,18 @@
 
 export type Periodo = "weekly" | "monthly" | "yearly";
 
+/**
+ * Colunas que `estadoDoOrcamento` precisa. Usar SEMPRE isto nas queries em vez
+ * de escrever o select à mão: foi por o dashboard ter um select próprio sem
+ * `start_at` que ele ignorou o arranque vazio dos orçamentos.
+ */
+export const COLUNAS_ORCAMENTO =
+  "id, category_id, amount, period, start_date, start_at, categories (name, color, icon)";
+
+/** Colunas das transações que alimentam `estadoDoOrcamento`. */
+export const COLUNAS_TX_ORCAMENTO =
+  "booking_date, amount, category_id, created_at";
+
 export interface OrcamentoComCategoria {
   id: string;
   category_id: string | null; // null = orçamento global de gastos

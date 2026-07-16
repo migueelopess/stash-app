@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/card";
 import { formatarEuros } from "@/lib/format";
 import {
+  COLUNAS_ORCAMENTO,
+  COLUNAS_TX_ORCAMENTO,
   CORES_NIVEL,
   FIM_PERIODO,
   estadoDoOrcamento,
@@ -45,14 +47,12 @@ export default async function OrcamentoPage({
   const [{ data }, { data: transacoesRaw }] = await Promise.all([
     supabase
       .from("budgets")
-      .select(
-        "id, category_id, amount, period, start_date, start_at, categories (name, color, icon)"
-      )
+      .select(COLUNAS_ORCAMENTO)
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("transactions")
-      .select("booking_date, amount, category_id, created_at")
+      .select(COLUNAS_TX_ORCAMENTO)
       .lt("amount", 0)
       .eq("is_movement", false)
       .gte("booking_date", inicioAno),

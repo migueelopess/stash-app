@@ -2,6 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { enviarPush } from "@/lib/notificacoes";
 import {
+  COLUNAS_ORCAMENTO,
+  COLUNAS_TX_ORCAMENTO,
   chavePeriodo,
   estadoDoOrcamento,
   nomeDoOrcamento,
@@ -26,9 +28,7 @@ export async function verificarAlertasDeOrcamentos(
   try {
     const { data: orcamentosRaw } = await supabase
       .from("budgets")
-      .select(
-        "id, category_id, amount, period, start_date, start_at, alert_level, alert_period, categories (name, color, icon)"
-      )
+      .select(`${COLUNAS_ORCAMENTO}, alert_level, alert_period`)
       .eq("user_id", userId);
 
     const orcamentos = (orcamentosRaw ?? []) as unknown as (OrcamentoComCategoria & {
@@ -41,7 +41,9 @@ export async function verificarAlertasDeOrcamentos(
     const inicioAno = `${new Date().getFullYear()}-01-01`;
     const { data: transacoesRaw } = await supabase
       .from("transactions")
-      .select("booking_date, amount, category_id, created_at, accounts!inner(bank_connections!inner(user_id))")
+      .select(
+        `${COLUNAS_TX_ORCAMENTO}, accounts!inner(bank_connections!inner(user_id))`
+      )
       .lt("amount", 0)
       .eq("is_movement", false)
       .gte("booking_date", inicioAno)

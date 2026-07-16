@@ -45,6 +45,7 @@ import {
   type TxRecorrencia,
 } from "@/lib/recorrencias";
 import {
+  COLUNAS_ORCAMENTO,
   CORES_NIVEL,
   estadoDoOrcamento,
   nomeDoOrcamento,
@@ -136,9 +137,7 @@ export default async function DashboardPage() {
     supabase.from("merchant_names").select("match_value, display_name"),
     supabase
       .from("budgets")
-      .select(
-        "id, category_id, amount, period, start_date, categories (name, color, icon)"
-      ),
+      .select(COLUNAS_ORCAMENTO),
     supabase.from("debts").select("direction, amount").eq("settled", false),
     supabase.from("recurring_exclusions").select("chave"),
     supabase.from("recurring_confirmations").select("chave"),
