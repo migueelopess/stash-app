@@ -61,7 +61,7 @@ self.addEventListener("push", (event) => {
     dados = { corpo: event.data?.text() };
   }
   event.waitUntil(
-    self.registration.showNotification(dados.titulo ?? "Gestão Financeira", {
+    self.registration.showNotification(dados.titulo ?? "Stash", {
       body: dados.corpo,
       icon: "/icon-192.png",
       badge: "/icon-192.png",

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gestão Financeira",
+  title: "Stash",
   description:
     "Gestão financeira pessoal com sincronização bancária automática",
   icons: {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Finanças",
+    title: "Stash",
   },
 };
 

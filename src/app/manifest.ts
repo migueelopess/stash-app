@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Gestão Financeira",
-    short_name: "Finanças",
+    name: "Stash",
+    short_name: "Stash",
     description:
       "Gestão financeira pessoal com sincronização bancária automática",
     lang: "pt-PT",
     start_url: "/",
     display: "standalone",
-    background_color: "#0a0a0a",
-    theme_color: "#0a0a0a",
+    background_color: "#0b1220",
+    theme_color: "#0b1220",
     icons: [
       {
         src: "/icon-192.png",
