@@ -89,18 +89,47 @@ const PALAVRAS_IGNORADAS = new Set([
   "https", "www",
 ]);
 
+// Marcadores no início de transferências de/para pessoas (CGD):
+// "TFI MIGUEL VIEIRA SEA", "TRF MBWAY 935XXX142", "Trf Mbway"…
+const MARCADOR_TRANSFERENCIA =
+  /^(?:(?:TFI|TRF|TRANSF(?:ERENCIA)?)\.?\s+)+(?:MB\s?WAY\.?\s*)?/i;
+
 /**
  * Extrai a palavra-chave que identifica o comerciante numa descrição
  * bancária: "COMPRAS C.DEB H3 ALEG" → "H3"; "Mbway 935XXX142" → "935XXX142".
+ *
+ * Em transferências a identidade é o NOME COMPLETO, não a primeira palavra:
+ * "TFI MIGUEL VIEIRA SEA" e "TFI MIGUEL ALEXANDRE" são pessoas diferentes.
+ * A chave mantém as palavras contíguas (é substring da descrição — a página
+ * de comerciante pesquisa por ilike) e para em referências numéricas ou
+ * tokens de 1 letra (truncaturas do banco).
  * Devolve null se nada tiver valor identificativo.
  */
 export function extrairPalavraChave(descricao: string | null): string | null {
   if (!descricao?.trim()) return null;
+  const texto = descricao.trim();
+
+  const marcador = MARCADOR_TRANSFERENCIA.exec(texto);
+  if (marcador && marcador[0].length > 0 && marcador[0].length < texto.length) {
+    const resto = texto.slice(marcador[0].length);
+    const uteis: string[] = [];
+    for (const token of resto.split(/\s+/)) {
+      const puro = token.replace(/[^\p{L}\p{N}]/gu, "");
+      if (puro.length < 2) break; // truncatura ("...DE G")
+      if (/^\d{5,}$/.test(puro)) break; // número de referência
+      uteis.push(puro.toUpperCase());
+      if (uteis.length === 4) break;
+    }
+    if (uteis.length > 0) return uteis.join(" ");
+    // transferência sem nome (ex: "TRF MBWAY") — segue o caminho clássico
+  }
+
   // Retirar prefixos técnicos ("COMPRAS C.DEB", "PAG.", "TRF."...) primeiro,
   // senão tokens como "C.DEB" ganham o lugar do comerciante
-  const semPrefixo = descricao
-    .trim()
-    .replace(/^(COMPRAS?\s+C\.?\s?DEB\.?|PAG(AMENTO)?\.?|TRF\.?|DD\.?)\s*/i, "");
+  const semPrefixo = texto.replace(
+    /^(COMPRAS?\s+C\.?\s?DEB\.?|PAG(AMENTO)?\.?|TRF\.?|DD\.?)\s*/i,
+    ""
+  );
   const tokens = semPrefixo.split(/\s+/);
   for (const token of tokens) {
     const puro = token.replace(/[^\p{L}\p{N}]/gu, "");
