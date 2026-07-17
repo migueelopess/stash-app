@@ -1,11 +1,12 @@
 import { cn } from "@/lib/utils";
+import marca from "@/lib/marca-stash.json";
 
 /**
- * Marca da Stash: "S" formado por moedas empilhadas, estilo néon.
- * A cor vem de `currentColor` (usa text-*). Com `animado`, cada traço
- * desenha-se em sequência (keyframes stash-tracar em globals.css).
- * Se alterares os paths, corre `node scripts/gerar-icones.mjs` para
- * regenerar os ícones do PWA.
+ * Marca da Stash: o "S" de moedas empilhadas, traçado 1:1 do logo original.
+ * A cor vem de `currentColor` (usa text-*). Com `animado`, entra com
+ * pop + fade (keyframes stash-entrar em globals.css).
+ * Se a marca mudar, atualiza src/lib/marca-stash.json e corre
+ * `node scripts/gerar-icones.mjs` para regenerar os ícones do PWA.
  */
 export function LogoStash({
   className,
@@ -16,23 +17,12 @@ export function LogoStash({
 }) {
   return (
     <svg
-      viewBox="5 -3.75 110 110"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={6}
-      strokeLinecap="round"
+      viewBox={marca.viewBox}
+      fill="currentColor"
       aria-hidden
-      className={cn(animado && "logo-tracar", className)}
+      className={cn(animado && "logo-entrar", className)}
     >
-      <ellipse cx="60" cy="22" rx="26" ry="10.5" pathLength={100} />
-      <path d="M86 22 v3 c0 7 -5 11 -12 12" pathLength={100} />
-      <path
-        d="M34 22 v8 c0 8 11 12 26 12 h13 c9 0 9 10 -3 10 H50 c-10 0 -16 6 -16 12 v2"
-        pathLength={100}
-      />
-      <ellipse cx="60" cy="68" rx="26" ry="10.5" pathLength={100} />
-      <path d="M34 68 v12 c0 7 11 11 26 11 s26 -4 26 -11 V68" pathLength={100} />
-      <path d="M34 74 c0 7 11 11 26 11 s26 -4 26 -11" pathLength={100} />
+      <path fillRule="evenodd" d={marca.d} />
     </svg>
   );
 }

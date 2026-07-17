@@ -69,7 +69,7 @@ export function SplashInicial() {
           <div className="absolute -inset-10 rounded-full bg-teal-300/10 blur-2xl" />
           <LogoStash
             animado
-            className="relative size-28 text-[#5eead4] animate-[stash-neon_2.2s_ease-in-out_infinite]"
+            className="relative size-32 text-[#61E5C3] animate-[stash-neon_2.2s_ease-in-out_infinite]"
           />
         </div>
 

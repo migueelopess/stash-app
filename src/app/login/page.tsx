@@ -32,7 +32,7 @@ export default async function LoginPage({
     <main className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-emerald-600/10 via-background to-background p-4">
       <Card className="w-full max-w-sm border-none shadow-xl shadow-emerald-950/10">
         <CardHeader className="items-center text-center">
-          <span className="mb-2 flex size-14 items-center justify-center rounded-2xl bg-[#0b1220] text-[#5eead4] shadow-lg shadow-emerald-950/40">
+          <span className="mb-2 flex size-14 items-center justify-center rounded-2xl bg-[#0b1220] text-[#61E5C3] shadow-lg shadow-emerald-950/40">
             <LogoStash className="size-9" />
           </span>
           <CardTitle className="text-2xl">Stash</CardTitle>

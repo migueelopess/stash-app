@@ -165,39 +165,27 @@
   }
 }
 
-/* Splash de arranque da Stash: o logo desenha-se traço a traço com glow */
-.logo-tracar :is(path, ellipse) {
-  stroke-dasharray: 100 100;
-  stroke-dashoffset: 100;
-  animation: stash-tracar 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+/* Splash de arranque da Stash: o logo entra com pop e o glow pulsa */
+.logo-entrar {
+  animation: stash-entrar 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.logo-tracar :is(path, ellipse):nth-of-type(2) {
-  animation-delay: 0.12s;
-}
-.logo-tracar :is(path, ellipse):nth-of-type(3) {
-  animation-delay: 0.22s;
-}
-.logo-tracar :is(path, ellipse):nth-of-type(4) {
-  animation-delay: 0.34s;
-}
-.logo-tracar :is(path, ellipse):nth-of-type(5) {
-  animation-delay: 0.44s;
-}
-.logo-tracar :is(path, ellipse):nth-of-type(6) {
-  animation-delay: 0.54s;
-}
-@keyframes stash-tracar {
+@keyframes stash-entrar {
+  from {
+    opacity: 0;
+    transform: scale(0.82) translateY(14px);
+  }
   to {
-    stroke-dashoffset: 0;
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 @keyframes stash-neon {
   0%,
   100% {
-    filter: drop-shadow(0 0 6px rgba(94, 234, 212, 0.35));
+    filter: drop-shadow(0 0 6px rgba(97, 229, 195, 0.35));
   }
   50% {
-    filter: drop-shadow(0 0 18px rgba(94, 234, 212, 0.7));
+    filter: drop-shadow(0 0 18px rgba(97, 229, 195, 0.7));
   }
 }
 @keyframes splash-ponto {

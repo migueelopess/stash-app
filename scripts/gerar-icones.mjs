@@ -1,23 +1,17 @@
 // Gera public/icon-192.png e public/icon-512.png a partir da marca Stash.
 // Correr da raiz do projeto: node scripts/gerar-icones.mjs
-// Mantém os paths em sincronia com src/components/logo-stash.tsx.
+// A marca vive em src/lib/marca-stash.json (única fonte de verdade).
 import sharp from "sharp";
+import { readFileSync } from "node:fs";
 
-const marca = `
-  <g fill="none" stroke="#5eead4" stroke-width="6" stroke-linecap="round">
-    <ellipse cx="60" cy="22" rx="26" ry="10.5"/>
-    <path d="M86 22 v3 c0 7 -5 11 -12 12"/>
-    <path d="M34 22 v8 c0 8 11 12 26 12 h13 c9 0 9 10 -3 10 H50 c-10 0 -16 6 -16 12 v2"/>
-    <ellipse cx="60" cy="68" rx="26" ry="10.5"/>
-    <path d="M34 68 v12 c0 7 11 11 26 11 s26 -4 26 -11 V68"/>
-    <path d="M34 74 c0 7 11 11 26 11 s26 -4 26 -11"/>
-  </g>`;
+const marca = JSON.parse(readFileSync("src/lib/marca-stash.json", "utf8"));
 
-// Quadrado cheio (o iOS/Android arredondam os cantos por conta deles);
-// a marca ocupa ~70% do tile.
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 -4.75 112 112">
-  <rect x="4" y="-4.75" width="112" height="112" fill="#0d1b26"/>
-  ${marca}
+// A marca está centrada em (512,512) no canvas 1024 e mede ~372x444.
+// Tile quadrado cheio (o iOS/Android arredondam os cantos por conta deles);
+// a marca ocupa ~62% da altura do tile.
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="154 154 716 716">
+  <rect x="154" y="154" width="716" height="716" fill="#0d1b26"/>
+  <path fill="#61E5C3" fill-rule="evenodd" d="${marca.d}"/>
 </svg>`;
 
 for (const tamanho of [192, 512]) {
