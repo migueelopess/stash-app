@@ -1,10 +1,10 @@
-# Plano de Implementação — App Gestão Financeira
+# Plano de Implementação — Stash
 
-> Web app PWA mobile-first que sincroniza automaticamente as transações bancárias reais do Miguel (CGD, BPI, Santander Totta) via Enable Banking. Zero entrada manual de valores.
+> Web app PWA mobile-first que sincroniza automaticamente as transações bancárias reais do utilizador (CGD, BPI, Santander Totta) via Enable Banking. Zero entrada manual de valores.
 
 ## 1. Visão
 
-- **Objetivo:** ver ganhos (salário part-time + tarefas por MB Way) e gastos reais, categorizados automaticamente, com dashboard de saldo, tendências e poupança.
+- **Objetivo:** ver ganhos e gastos reais, categorizados automaticamente, com dashboard de saldo, tendências e poupança.
 - **Princípio:** a app só **lê** dados bancários (AIS/PSD2). Nunca movimenta dinheiro.
 - **Utilizador único** (uso pessoal), mas com auth real — os dados são sensíveis.
 
@@ -37,7 +37,7 @@ Vercel ── Server Actions / Route Handlers
 ```
 
 - A chave privada da Enable Banking vive **só no servidor** (env var na Vercel).
-- Fluxo de ligação a um banco: app pede URL de autorização → redirect para o banco → Miguel autentica na app do banco (Caixadirecta/BPI/Santander) → callback com `code` → criar sessão Enable Banking → guardar `session_id` + contas.
+- Fluxo de ligação a um banco: app pede URL de autorização → redirect para o banco → o utilizador autentica na app do banco (Caixadirecta/BPI/Santander) → callback com `code` → criar sessão Enable Banking → guardar `session_id` + contas.
 - Sessões PSD2 duram até 180 dias (varia por banco) → app avisa quando faltar pouco para renovar.
 - **Limite PSD2:** ~4 chamadas não assistidas/dia por conta → 1 sync via cron + sync manual quando a app está aberta.
 
@@ -133,7 +133,7 @@ create table goals (
 
 - **Seed de categorias:** Salário, Tarefas (casa), Outros ganhos / Alimentação, Transportes, Subscrições, Lazer, Educação, Transferências próprias, Outros.
 - **Regras iniciais (exemplos):**
-  - `description contains "MB WAY" AND amount > 0 AND counterparty = <nome dos pais>` → Tarefas
+  - `description contains "MB WAY" AND amount > 0 AND counterparty = <contraparte conhecida>` → Tarefas
   - crédito recorrente mensal do empregador → Salário
   - `description contains "CONTINENTE|PINGO DOCE|LIDL"` → Alimentação
   - `description contains "SPOTIFY|NETFLIX|YOUTUBE"` → Subscrições
@@ -147,7 +147,7 @@ create table goals (
 - Repo Git + deploy inicial na Vercel
 
 ### Fase 1 — Auth + BD (½ dia)
-- Supabase Auth (email + password ou magic link; só o Miguel)
+- Supabase Auth (email + password ou magic link; utilizador único)
 - Migrations do esquema (secção 4) + RLS + seed de categorias
 - Layout base mobile-first (bottom nav: Dashboard, Transações, Contas, Definições)
 
@@ -193,5 +193,5 @@ CRON_SECRET=                      # proteger /api/sync
 
 - **Renovação PSD2 (90–180 dias):** inevitável por lei → aviso na app + email.
 - **Limite de 4 syncs não assistidos/dia:** 1 cron diário chega; sync manual conta como "assistido".
-- **Restricted Production:** só contas tuas — perfeito para uso pessoal; se um dia quiseres publicar a app, é preciso contrato com a Enable Banking.
-- **Dados sensíveis:** RLS obrigatória, `raw` jsonb nunca exposto no cliente, repo privado.
+- **Restricted Production:** só contas do próprio — perfeito para uso pessoal; para abrir a app a terceiros seria preciso contrato com a Enable Banking.
+- **Dados sensíveis:** RLS obrigatória, `raw` jsonb nunca exposto no cliente, segredos só em variáveis de ambiente (nunca no repo).
