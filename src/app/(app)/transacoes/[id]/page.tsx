@@ -216,7 +216,10 @@ export default async function TransacaoPage({
                 name="voltar"
                 value={`/transacoes/${transacao.id}`}
               />
-              <TileSubmit icon={Repeat} label="Gasto fixo" />
+              <TileSubmit
+                icon={<Repeat className="size-5" />}
+                label="Gasto fixo"
+              />
             </form>
           )
         )}
@@ -229,7 +232,7 @@ export default async function TransacaoPage({
             value={transacao.is_movement ? "false" : "true"}
           />
           <TileSubmit
-            icon={ArrowLeftRight}
+            icon={<ArrowLeftRight className="size-5" />}
             label={transacao.is_movement ? "É movimento" : "Movimento"}
             className={cn(
               transacao.is_movement &&
