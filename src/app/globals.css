@@ -228,24 +228,24 @@
   opacity: 0.5;
 }
 .fundo-blob-1 {
-  width: 62vw;
-  height: 62vw;
-  top: -14vw;
-  left: -16vw;
+  width: 74vw;
+  height: 74vw;
+  top: -18vw;
+  left: -20vw;
   animation: fundo-drift-1 24s ease-in-out infinite;
 }
 .fundo-blob-2 {
-  width: 56vw;
-  height: 56vw;
-  top: -6vw;
-  right: -18vw;
+  width: 66vw;
+  height: 66vw;
+  top: -10vw;
+  right: -22vw;
   animation: fundo-drift-2 30s ease-in-out infinite;
 }
 .fundo-blob-3 {
-  width: 68vw;
-  height: 68vw;
-  top: 34vh;
-  left: 6vw;
+  width: 80vw;
+  height: 80vw;
+  top: 30vh;
+  left: 2vw;
   animation: fundo-drift-3 36s ease-in-out infinite;
 }
 @keyframes fundo-drift-1 {
