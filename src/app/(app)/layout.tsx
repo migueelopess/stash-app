@@ -11,7 +11,9 @@ export default function AppLayout({
     <div className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col">
       <FundoAnimado />
       <SplashInicial />
-      <main className="relative z-10 flex-1 p-4 pb-32">{children}</main>
+      <main className="relative z-10 flex-1 px-4 pb-32 pt-[max(1rem,env(safe-area-inset-top))]">
+        {children}
+      </main>
       <BottomNav />
     </div>
   );

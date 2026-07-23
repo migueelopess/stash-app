@@ -23,15 +23,19 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    // translucent: o conteúdo (incl. o fundo animado) estende-se por baixo
+    // da status bar em vez de ficar uma faixa sólida por cima.
+    statusBarStyle: "black-translucent",
     title: "Stash",
   },
 };
 
 export const viewport: Viewport = {
+  // cover: conteúdo vai até às bordas (por baixo da status bar/notch).
+  viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f8f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
   ],
 };
 
