@@ -18,19 +18,13 @@ import {
   compararComerciantes,
   estatisticasDoMes,
   historicoMensal,
-  porDiaSemana,
   resumoComparativo,
-  splitFixoVariavel,
   type ItemComparado,
   type TipoAnalise,
   type TxAnalise,
 } from "@/lib/analise";
-import {
-  detetarRecorrencias,
-  type TxRecorrencia,
-} from "@/lib/recorrencias";
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
-import { formatarData, formatarEuros } from "@/lib/format";
+import { formatarEuros } from "@/lib/format";
 import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -69,12 +63,10 @@ function Delta({
   dif,
   pct,
   bomSeSobe,
-  unidade = "eur",
 }: {
   dif: number;
   pct: number | null;
   bomSeSobe: boolean;
-  unidade?: "eur" | "pp";
 }) {
   if (Math.abs(dif) < 0.01) {
     return (
@@ -88,9 +80,7 @@ function Delta({
   const texto =
     pct !== null
       ? `${sobe ? "+" : ""}${pct}%`
-      : unidade === "pp"
-        ? `${sobe ? "+" : "−"}${Math.abs(Math.round(dif))} pp`
-        : `${sobe ? "+" : "−"}${formatarEuros(Math.abs(dif))}`;
+      : `${sobe ? "+" : "−"}${formatarEuros(Math.abs(dif))}`;
   return (
     <span
       className={cn(
@@ -193,24 +183,17 @@ export default async function AnalisePage({
   inicio.setMonth(inicio.getMonth() - MESES_FETCH);
   inicio.setDate(1);
 
-  const [
-    { data: transacoesRaw },
-    { data: nomesRaw },
-    { data: exclusoesRaw },
-    { data: confirmacoesRaw },
-    overrides,
-  ] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select(
-        "booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
-      )
-      .gte("booking_date", inicio.toISOString().slice(0, 10)),
-    supabase.from("merchant_names").select("match_value, display_name"),
-    supabase.from("recurring_exclusions").select("chave"),
-    supabase.from("recurring_confirmations").select("chave"),
-    carregarCoresOverride(supabase),
-  ]);
+  const [{ data: transacoesRaw }, { data: nomesRaw }, overrides] =
+    await Promise.all([
+      supabase
+        .from("transactions")
+        .select(
+          "booking_date, amount, description, counterparty, category_id, is_movement, categories (name, color, icon)"
+        )
+        .gte("booking_date", inicio.toISOString().slice(0, 10)),
+      supabase.from("merchant_names").select("match_value, display_name"),
+      carregarCoresOverride(supabase),
+    ]);
 
   const nomes = new Map(
     (nomesRaw ?? []).map((n) => [n.match_value, n.display_name])
@@ -235,34 +218,8 @@ export default async function AnalisePage({
   const rotuloTipo = tipo === "gastos" ? "Gasto" : "Recebido";
   const baseHref = `/analise?mes=${mes}&tipo=${tipo}`;
 
-  // Estatísticas do mês + fixos vs. variáveis (chaves das recorrências ativas)
   const stats = estatisticasDoMes(txs, mes, agora, tipo);
-  const txsRec: TxRecorrencia[] = txs
-    .filter((t) => t.chave)
-    .map((t) => ({
-      chave: t.chave!,
-      booking_date: t.booking_date,
-      amount: t.amount,
-      descricao: null,
-      contraparte: null,
-      categoria: t.categoria,
-      cor: t.cor,
-      icone: t.icone,
-    }));
-  const chavesFixas = new Set(
-    detetarRecorrencias(
-      txsRec,
-      new Set((exclusoesRaw ?? []).map((e) => e.chave as string)),
-      new Set((confirmacoesRaw ?? []).map((e) => e.chave as string)),
-      agora
-    )
-      .filter((r) => r.ativa)
-      .map((r) => r.chave)
-  );
-  const split = splitFixoVariavel(txs, mes, chavesFixas, agora);
   const tendencia = historicoMensal(txs, mesAtual, tipo, 6);
-  const semana = porDiaSemana(txs, tipo);
-  const maxSemana = Math.max(1, ...semana.map((s) => s.valor));
 
   const heroAtual = resumo
     ? tipo === "gastos"
@@ -272,7 +229,6 @@ export default async function AnalisePage({
   const heroDif = resumo ? (tipo === "gastos" ? resumo.gastoDif : resumo.ganhoDif) : 0;
   const heroPct = resumo ? (tipo === "gastos" ? resumo.gastoPct : resumo.ganhoPct) : null;
   const heroMedia = resumo ? (tipo === "gastos" ? resumo.gastoMedia : resumo.ganhoMedia) : 0;
-  const heroSubeBom = tipo === "ganhos";
 
   // ---- Drill-in de categoria ----
   const nomeCategoria = catAlvo
@@ -310,9 +266,7 @@ export default async function AnalisePage({
         </div>
       </div>
 
-      {!catAlvo && (
-        <ControlosAnalise meses={meses} mes={mes} tipo={tipo} />
-      )}
+      {!catAlvo && <ControlosAnalise meses={meses} mes={mes} tipo={tipo} />}
 
       {!resumo ? (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border p-8 text-center">
@@ -337,7 +291,7 @@ export default async function AnalisePage({
         />
       ) : (
         <>
-          {/* Hero */}
+          {/* Hero: total do mês vs habitual, com 2 stats-chave */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-700 to-purple-800 p-5 text-white shadow-lg shadow-violet-900/20">
             <div className="pointer-events-none absolute -right-14 -top-14 size-44 rounded-full bg-white/10 blur-2xl" />
             <p className="text-sm font-medium text-violet-100">
@@ -362,115 +316,40 @@ export default async function AnalisePage({
                 habitual {formatarEuros(heroMedia)}
               </span>
             </div>
-            {tipo === "gastos" && resumo.projecao !== null && (
-              <p className="mt-3 text-xs text-violet-100">
-                Ao ritmo atual: ~{formatarEuros(resumo.projecao)} no fim do mês
-              </p>
-            )}
-          </div>
 
-          {/* Estatísticas rápidas do mês */}
-          <div className="grid grid-cols-3 gap-2">
-            <Card className="border-none shadow-sm">
-              <CardContent className="flex flex-col gap-1 pt-1">
-                <p className="text-[11px] text-muted-foreground">Média/dia</p>
+            <div className="mt-4 flex gap-8 border-t border-white/15 pt-3">
+              <div>
+                <p className="text-[11px] text-violet-200">Média/dia</p>
                 <p className="text-sm font-bold tabular-nums">
                   {formatarEuros(stats.mediaDia)}
                 </p>
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-sm">
-              <CardContent className="flex flex-col gap-1 pt-1">
-                <p className="text-[11px] text-muted-foreground">
-                  {tipo === "gastos" ? "Compras" : "Entradas"}
-                </p>
-                <p className="text-sm font-bold tabular-nums">
-                  {stats.nTransacoes}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-sm">
-              <CardContent className="flex flex-col gap-1 pt-1">
-                <p className="text-[11px] text-muted-foreground">
-                  {tipo === "gastos" ? "Dias sem gastos" : "Maior entrada"}
+              </div>
+              <div>
+                <p className="text-[11px] text-violet-200">
+                  {tipo === "gastos" ? "Taxa de poupança" : "Maior entrada"}
                 </p>
                 <p className="text-sm font-bold tabular-nums">
                   {tipo === "gastos"
-                    ? stats.diasSemGastos
+                    ? resumo.poupancaAtual === null
+                      ? "—"
+                      : `${resumo.poupancaAtual}%`
                     : stats.maior
                       ? formatarEuros(stats.maior.valor)
                       : "—"}
                 </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Maior gasto único do mês */}
-          {tipo === "gastos" && stats.maior && (
-            <Link
-              href={
-                stats.maior.chave
-                  ? `/comerciante/${encodeURIComponent(stats.maior.chave)}`
-                  : baseHref
-              }
-              className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm transition-all hover:bg-muted/40 active:scale-[0.99]"
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400">
-                <TrendingUp className="size-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">
-                  Maior gasto: {stats.maior.nome}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatarData(stats.maior.data)}
-                </p>
               </div>
-              <p className="shrink-0 text-sm font-bold tabular-nums">
-                {formatarEuros(stats.maior.valor)}
-              </p>
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-            </Link>
-          )}
-
-          {/* Fixos vs. variáveis */}
-          {tipo === "gastos" && split.total > 0 && (
-            <Card className="border-none shadow-sm">
-              <CardContent className="flex flex-col gap-2 pt-3">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-sm font-medium">Fixos vs. variáveis</p>
-                  <p className="text-xs text-muted-foreground">
-                    {split.pctFixo}% fixos
+              {tipo === "gastos" && resumo.projecao !== null && (
+                <div>
+                  <p className="text-[11px] text-violet-200">Fim do mês</p>
+                  <p className="text-sm font-bold tabular-nums">
+                    ~{formatarEuros(resumo.projecao)}
                   </p>
                 </div>
-                <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full">
-                  <div
-                    className="h-full rounded-l-full bg-violet-500"
-                    style={{ width: `${Math.max(2, split.pctFixo)}%` }}
-                  />
-                  <div
-                    className="h-full flex-1 rounded-r-full bg-emerald-500"
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>
-                    <span className="font-medium text-violet-600 dark:text-violet-400">
-                      ●
-                    </span>{" "}
-                    Fixos {formatarEuros(split.fixo)}
-                  </span>
-                  <span>
-                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                      ●
-                    </span>{" "}
-                    Variáveis {formatarEuros(split.variavel)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </div>
+          </div>
 
-          {/* Tendência 6 meses — toca para mudar o mês em análise */}
+          {/* Tendência 6 meses — toca num mês para o analisar */}
           <Card className="border-none shadow-sm">
             <CardContent className="flex flex-col gap-3 pt-3">
               <p className="text-sm font-medium">
@@ -518,48 +397,6 @@ export default async function AnalisePage({
             </CardContent>
           </Card>
 
-          {/* Ganhos/poupança (contexto) */}
-          <div className="grid grid-cols-2 gap-2">
-            <Card className="border-none shadow-sm">
-              <CardContent className="flex flex-col gap-1 pt-1">
-                <p className="text-[11px] text-muted-foreground">
-                  {tipo === "gastos" ? "Ganhos" : "Gastos"}
-                </p>
-                <p className="text-lg font-bold tabular-nums">
-                  {formatarEuros(
-                    tipo === "gastos" ? resumo.ganhoAtual : resumo.gastoAtual
-                  )}
-                </p>
-                <Delta
-                  dif={tipo === "gastos" ? resumo.ganhoDif : resumo.gastoDif}
-                  pct={tipo === "gastos" ? resumo.ganhoPct : resumo.gastoPct}
-                  bomSeSobe={tipo === "gastos"}
-                />
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-sm">
-              <CardContent className="flex flex-col gap-1 pt-1">
-                <p className="text-[11px] text-muted-foreground">Poupança</p>
-                <p className="text-lg font-bold tabular-nums">
-                  {resumo.poupancaAtual === null ? "—" : `${resumo.poupancaAtual}%`}
-                </p>
-                {resumo.poupancaAtual !== null && resumo.poupancaMedia !== null ? (
-                  <Delta
-                    dif={resumo.poupancaAtual - resumo.poupancaMedia}
-                    pct={null}
-                    bomSeSobe
-                    unidade="pp"
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    habitual{" "}
-                    {resumo.poupancaMedia === null ? "—" : `${resumo.poupancaMedia}%`}
-                  </span>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
           <SeccaoCategorias
             txs={txs}
             mes={mes}
@@ -568,55 +405,6 @@ export default async function AnalisePage({
             bomSeSobe={bomSeSobe}
             baseHref={baseHref}
           />
-
-          {/* Hábito: em que dias da semana gastas/recebes mais */}
-          {semana.some((s) => s.valor > 0) && (
-            <Card className="border-none shadow-sm">
-              <CardContent className="flex flex-col gap-3 pt-3">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-sm font-medium">
-                    Em que dias {tipo === "gastos" ? "gastas" : "recebes"} mais
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    últimos {MESES_FETCH} meses
-                  </p>
-                </div>
-                <div className="flex items-end justify-between gap-1 pt-1">
-                  {semana.map((s) => (
-                    <div
-                      key={s.rotulo}
-                      className="flex flex-1 flex-col items-center gap-1.5"
-                    >
-                      <div className="flex h-16 w-full items-end justify-center">
-                        <div
-                          className="w-4 rounded-full"
-                          style={{
-                            height: `${Math.max(3, (s.valor / maxSemana) * 100)}%`,
-                            backgroundColor:
-                              s.valor === maxSemana
-                                ? tipo === "gastos"
-                                  ? "#f43f5e"
-                                  : "#10b981"
-                                : "var(--muted)",
-                          }}
-                        />
-                      </div>
-                      <span
-                        className={cn(
-                          "text-[10px]",
-                          s.valor === maxSemana
-                            ? "font-bold text-foreground"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {s.rotulo}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           <SeccaoComerciantes
             txs={txs}
@@ -646,7 +434,7 @@ function SeccaoCategorias({
   bomSeSobe: boolean;
   baseHref: string;
 }) {
-  const { itens, nBase } = compararCategorias(txs, mes, agora, 3, tipo);
+  const { itens, nBase } = compararCategorias(txs, mes, agora, 4, tipo);
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between px-1">
@@ -689,11 +477,13 @@ function SeccaoComerciantes({
   bomSeSobe: boolean;
 }) {
   const { itens } = compararComerciantes(txs, mes, agora, 3, tipo);
-  const top = [...itens].sort((a, b) => b.atual - a.atual).slice(0, 6);
+  const top = [...itens].sort((a, b) => b.atual - a.atual).slice(0, 5);
   if (top.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
-      <p className="px-1 text-sm font-semibold">Onde mais {tipo === "gastos" ? "gastaste" : "recebeste"}</p>
+      <p className="px-1 text-sm font-semibold">
+        Onde mais {tipo === "gastos" ? "gastaste" : "recebeste"}
+      </p>
       {top.map((m) => (
         <LinhaComparada
           key={m.chave}
@@ -777,9 +567,6 @@ function DrillCategoria({
               Todos os meses
             </Link>
           </div>
-          <p className="-mt-1 text-xs text-muted-foreground">
-            Toca num mês para ver os comerciantes desse mês
-          </p>
           <div className="flex items-end justify-between gap-1 pt-1">
             {historico.map((p) => {
               const ativo = !dmAll && p.chave === dmMes;

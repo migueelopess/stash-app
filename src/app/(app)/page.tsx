@@ -14,7 +14,6 @@ import {
   GraficoSaldoIntervalos,
   type Intervalo,
 } from "@/components/graficos/grafico-saldo-intervalos";
-import { GraficoPrevisao } from "@/components/graficos/grafico-previsao";
 import { GraficoSparkline } from "@/components/graficos/grafico-sparkline";
 import { IconeCategoria } from "@/components/icone-categoria";
 import {
@@ -36,7 +35,6 @@ import {
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { diasAte, formatarData, formatarEuros } from "@/lib/format";
 import {
-  previsaoSaldo,
   proximosEventos,
   safeToSpend,
   type FonteRecorrente,
@@ -326,8 +324,6 @@ export default async function DashboardPage() {
   const eventosFuturos = proximosEventos(fontesFuturas, new Date(), 30);
   const proximos = eventosFuturos.slice(0, 5);
   const safe = safeToSpend(saldoTotal, eventosFuturos);
-  const previsao = previsaoSaldo(saldoTotal, eventosFuturos, new Date(), 30);
-  const previsaoNegativa = previsao.minimo.saldo < 0;
 
   const aRenovar = (ligacoes ?? []).filter(
     (ligacao) => diasAte(ligacao.valid_until) <= 14
@@ -450,97 +446,6 @@ export default async function DashboardPage() {
           </>
         )}
       </div>
-
-      {/* O que aí vem nos próximos 30 dias */}
-      {proximos.length > 0 && (
-        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(1)}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-sm">
-              Próximos
-              <Link
-                href="/recorrencias"
-                className="text-xs font-medium text-primary"
-              >
-                Gastos fixos →
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {proximos.map((e) => (
-              <div key={e.id} className="flex items-center gap-3">
-                <IconeCategoria
-                  icone={e.icone}
-                  cor={e.cor}
-                  ganho={e.entrada}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{e.nome}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {e.dias === 0
-                      ? "hoje"
-                      : e.dias === 1
-                        ? "amanhã"
-                        : `em ${e.dias} dias`}{" "}
-                    · {formatarData(e.data)}
-                  </p>
-                </div>
-                <p
-                  className={cn(
-                    "shrink-0 text-sm font-semibold tabular-nums",
-                    e.entrada && "text-emerald-600 dark:text-emerald-400"
-                  )}
-                >
-                  {e.entrada ? "+" : ""}
-                  {formatarEuros(e.valor)}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Previsão do saldo nos próximos 30 dias */}
-      {proximos.length > 0 && (
-        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(2)}>
-          <CardHeader>
-            <CardTitle className="text-sm">Previsão · 30 dias</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <GraficoPrevisao
-              pontos={previsao.pontos}
-              negativo={previsaoNegativa}
-            />
-            {previsaoNegativa ? (
-              previsao.temRendimento ? (
-                <p className="flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400">
-                  <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-                  <span>
-                    Por volta de {formatarData(previsao.minimo.data)} o saldo
-                    pode chegar a{" "}
-                    <strong>{formatarEuros(previsao.minimo.saldo)}</strong>.
-                  </span>
-                </p>
-              ) : (
-                <p className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400">
-                  <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-                  <span>
-                    Só com o previsto, o saldo desce até{" "}
-                    <strong>{formatarEuros(previsao.minimo.saldo)}</strong> a{" "}
-                    {formatarData(previsao.minimo.data)} — conta com os teus
-                    rendimentos.
-                  </span>
-                </p>
-              )
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Ponto mais baixo: {formatarEuros(previsao.minimo.saldo)} a{" "}
-                {formatarData(previsao.minimo.data)} · fim do mês ~
-                {formatarEuros(previsao.final.saldo)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Insight: comparação com o mês anterior → leva à Análise */}
       {comparacao && (
@@ -700,8 +605,61 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
+      <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(6)}>
+        <CardHeader>
+          <CardTitle className="text-sm">Evolução do saldo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <GraficoSaldoIntervalos series={seriesSaldo} />
+        </CardContent>
+      </Card>
+
+      {/* Gastos fixos e rendimentos a caminho (prioridade menor) */}
+      {proximos.length > 0 && (
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(7)}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-sm">
+              Próximos
+              <Link
+                href="/recorrencias"
+                className="text-xs font-medium text-primary"
+              >
+                Gastos fixos →
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {proximos.map((e) => (
+              <div key={e.id} className="flex items-center gap-3">
+                <IconeCategoria icone={e.icone} cor={e.cor} ganho={e.entrada} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{e.nome}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {e.dias === 0
+                      ? "hoje"
+                      : e.dias === 1
+                        ? "amanhã"
+                        : `em ${e.dias} dias`}{" "}
+                    · {formatarData(e.data)}
+                  </p>
+                </div>
+                <p
+                  className={cn(
+                    "shrink-0 text-sm font-semibold tabular-nums",
+                    e.entrada && "text-emerald-600 dark:text-emerald-400"
+                  )}
+                >
+                  {e.entrada ? "+" : ""}
+                  {formatarEuros(e.valor)}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {topGastos.length > 0 && (
-        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(6)}>
+        <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(8)}>
           <CardHeader>
             <CardTitle className="text-sm">Maiores gastos do mês</CardTitle>
           </CardHeader>
@@ -734,15 +692,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
-
-      <Card className={cn("border-none shadow-sm", ANIM)} style={atraso(7)}>
-        <CardHeader>
-          <CardTitle className="text-sm">Evolução do saldo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <GraficoSaldoIntervalos series={seriesSaldo} />
-        </CardContent>
-      </Card>
     </div>
   );
 }
