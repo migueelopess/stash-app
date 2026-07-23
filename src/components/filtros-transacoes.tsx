@@ -2,89 +2,33 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { SeletorMes } from "@/components/seletor-mes";
-import { cn } from "@/lib/utils";
-
-interface Conta {
-  id: string;
-  name: string | null;
-  iban: string | null;
-}
 
 interface Opcao {
   valor: string;
   rotulo: string;
 }
 
-/** Filtros das transações: mês em stepper + tipo/conta em pills. */
-export function FiltrosTransacoes({
-  contas,
-  meses,
-}: {
-  contas: Conta[];
-  meses: Opcao[];
-}) {
+/** Stepper de mês das transações (com estado "Todos os meses"). */
+export function FiltrosTransacoes({ meses }: { meses: Opcao[] }) {
   const router = useRouter();
   const params = useSearchParams();
 
-  const definir = (chave: string, valor: string) => {
+  const definirMes = (valor: string) => {
     const novos = new URLSearchParams(params.toString());
-    if (valor) novos.set(chave, valor);
-    else novos.delete(chave);
-    // recomeçar paginação e limpar mensagens ao mudar filtros
+    if (valor) novos.set("mes", valor);
+    else novos.delete("mes");
     novos.delete("n");
     novos.delete("sync");
     novos.delete("novas");
     router.push(`/transacoes?${novos.toString()}`);
   };
 
-  const pill = (ativo: boolean) =>
-    cn(
-      "h-9 shrink-0 rounded-full border px-3 text-sm font-medium shadow-sm transition-colors",
-      ativo
-        ? "border-primary/40 bg-primary/10 text-primary"
-        : "border-border/60 bg-card text-foreground"
-    );
-
-  const mes = params.get("mes") ?? "";
-  const tipo = params.get("tipo") ?? "";
-  const conta = params.get("conta") ?? "";
-
   return (
-    <div className="flex flex-col gap-2">
-      <SeletorMes
-        meses={meses}
-        valor={mes}
-        aoMudar={(m) => definir("mes", m)}
-        permitirTodos
-      />
-      <div className="sem-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-0.5">
-        <select
-          aria-label="Tipo"
-          value={tipo}
-          onChange={(e) => definir("tipo", e.target.value)}
-          className={pill(tipo !== "")}
-        >
-          <option value="">Ganhos e gastos</option>
-          <option value="ganhos">Só ganhos</option>
-          <option value="gastos">Só gastos</option>
-          <option value="movimentos">Só movimentos</option>
-        </select>
-        {contas.length > 1 && (
-          <select
-            aria-label="Conta"
-            value={conta}
-            onChange={(e) => definir("conta", e.target.value)}
-            className={pill(conta !== "")}
-          >
-            <option value="">Todas as contas</option>
-            {contas.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name ?? c.iban ?? "Conta"}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-    </div>
+    <SeletorMes
+      meses={meses}
+      valor={params.get("mes") ?? ""}
+      aoMudar={definirMes}
+      permitirTodos
+    />
   );
 }

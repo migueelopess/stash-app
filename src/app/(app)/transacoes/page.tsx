@@ -3,7 +3,7 @@ import { ChevronRight, RefreshCw, Sparkles } from "lucide-react";
 import { BotaoSubmit } from "@/components/botao-submit";
 import { FiltrosTransacoes } from "@/components/filtros-transacoes";
 import { IconeCategoria } from "@/components/icone-categoria";
-import { PesquisaTransacoes } from "@/components/pesquisa-transacoes";
+import { PesquisaFiltros } from "@/components/pesquisa-filtros";
 import { Button } from "@/components/ui/button";
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
 import { formatarEuros } from "@/lib/format";
@@ -239,9 +239,9 @@ export default async function TransacoesPage({
         </Link>
       )}
 
-      <PesquisaTransacoes />
+      <PesquisaFiltros contas={contas ?? []} />
 
-      <FiltrosTransacoes contas={contas ?? []} meses={opcoesDeMes()} />
+      <FiltrosTransacoes meses={opcoesDeMes()} />
 
       {visiveis.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">
