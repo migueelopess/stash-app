@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { AtivarNotificacoes } from "@/components/ativar-notificacoes";
 import { EditorPerfil } from "@/components/editor-perfil";
+import { SeletorFundo } from "@/components/seletor-fundo";
 import { SeletorTema } from "@/components/seletor-tema";
 import { Button } from "@/components/ui/button";
 import { dadosPerfil } from "@/lib/perfil";
@@ -83,6 +84,13 @@ export default async function PerfilPage({
           Aparência
         </h2>
         <SeletorTema />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <h2 className="px-1 text-sm font-semibold text-muted-foreground">
+          Fundo
+        </h2>
+        <SeletorFundo />
       </div>
 
       <AtivarNotificacoes />

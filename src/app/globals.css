@@ -211,6 +211,79 @@
   }
 }
 
+/* Fundo animado: "aurora" de blobs de cor que derivam devagar e reagem ao
+   scroll (parallax via --scroll, definido em JS). Subtil, atrás do conteúdo. */
+.fundo-animado {
+  transform: translate3d(0, calc(var(--scroll, 0) * -0.06px), 0);
+  will-change: transform;
+}
+.fundo-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(64px);
+  opacity: 0.32;
+  will-change: transform;
+}
+.dark .fundo-blob {
+  opacity: 0.5;
+}
+.fundo-blob-1 {
+  width: 62vw;
+  height: 62vw;
+  top: -14vw;
+  left: -16vw;
+  animation: fundo-drift-1 24s ease-in-out infinite;
+}
+.fundo-blob-2 {
+  width: 56vw;
+  height: 56vw;
+  top: -6vw;
+  right: -18vw;
+  animation: fundo-drift-2 30s ease-in-out infinite;
+}
+.fundo-blob-3 {
+  width: 68vw;
+  height: 68vw;
+  top: 34vh;
+  left: 6vw;
+  animation: fundo-drift-3 36s ease-in-out infinite;
+}
+@keyframes fundo-drift-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(6vw, 5vh) scale(1.12);
+  }
+}
+@keyframes fundo-drift-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.05);
+  }
+  50% {
+    transform: translate(-5vw, 7vh) scale(1);
+  }
+}
+@keyframes fundo-drift-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(4vw, -6vh) scale(1.1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fundo-animado {
+    transform: none;
+  }
+  .fundo-blob {
+    animation: none;
+  }
+}
+
 /* iOS: campos com <16px provocam zoom automático ao focar. Forçar 16px
    em mobile (fora de @layer para vencer as utilities do Tailwind). */
 @media (max-width: 640px) {
