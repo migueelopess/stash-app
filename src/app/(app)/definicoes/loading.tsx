@@ -1,13 +1,26 @@
+import {
+  Esqueleto,
+  EsqueletoPagina,
+  EsqueletoTitulo,
+} from "@/components/esqueleto";
+
 export default function Loading() {
   return (
-    <div className="flex animate-pulse flex-col gap-4 pt-1">
-      <div className="h-7 w-36 rounded-lg bg-muted" />
-      <div className="h-16 rounded-2xl bg-muted" />
-      <div className="flex flex-col gap-2">
-        <div className="h-16 rounded-2xl bg-muted" />
-        <div className="h-16 rounded-2xl bg-muted" />
-        <div className="h-16 rounded-2xl bg-muted" />
+    <EsqueletoPagina>
+      <EsqueletoTitulo className="w-28" />
+      {/* Avatar + nome */}
+      <div className="flex flex-col items-center gap-4">
+        <div className="size-24 rounded-full bg-muted" />
+        <div className="h-10 w-full rounded-xl bg-muted" />
+        <div className="h-10 w-full rounded-xl bg-muted" />
       </div>
-    </div>
+      <Esqueleto className="h-12" />
+      <div className="flex flex-col gap-2">
+        <Esqueleto className="h-16" />
+        <Esqueleto className="h-16" />
+        <Esqueleto className="h-16" />
+        <Esqueleto className="h-16" />
+      </div>
+    </EsqueletoPagina>
   );
 }

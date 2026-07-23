@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Check,
   ChevronRight,
   Landmark,
   ListChecks,
@@ -7,8 +8,10 @@ import {
   Tags,
 } from "lucide-react";
 import { AtivarNotificacoes } from "@/components/ativar-notificacoes";
+import { EditorPerfil } from "@/components/editor-perfil";
 import { SeletorTema } from "@/components/seletor-tema";
 import { Button } from "@/components/ui/button";
+import { dadosPerfil } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
 
@@ -43,15 +46,37 @@ const seccoes = [
   },
 ];
 
-export default async function DefinicoesPage() {
+export default async function PerfilPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; erro?: string }>;
+}) {
+  const { ok } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const perfil = dadosPerfil(user);
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
-      <h1 className="text-2xl font-bold">Definições</h1>
+      <h1 className="text-2xl font-bold">Perfil</h1>
+
+      {user && (
+        <EditorPerfil
+          userId={user.id}
+          nome={perfil.nome}
+          email={perfil.email}
+          avatarUrl={perfil.avatarUrl}
+          cor={perfil.cor}
+        />
+      )}
+
+      {ok === "perfil" && (
+        <p className="flex items-center justify-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+          <Check className="size-4" /> Perfil atualizado
+        </p>
+      )}
 
       <div className="flex flex-col gap-2">
         <h2 className="px-1 text-sm font-semibold text-muted-foreground">
@@ -63,6 +88,9 @@ export default async function DefinicoesPage() {
       <AtivarNotificacoes />
 
       <div className="flex flex-col gap-2">
+        <h2 className="px-1 text-sm font-semibold text-muted-foreground">
+          Gestão
+        </h2>
         {seccoes.map(({ href, titulo, descricao, icon: Icon, cor }) => (
           <Link
             key={href}
@@ -88,7 +116,7 @@ export default async function DefinicoesPage() {
 
       <div className="flex flex-col gap-1">
         <p className="text-sm text-muted-foreground">Sessão iniciada como</p>
-        <p className="text-sm font-medium">{user?.email}</p>
+        <p className="text-sm font-medium">{perfil.email}</p>
       </div>
       <form action={logout}>
         <Button type="submit" variant="outline">

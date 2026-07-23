@@ -41,7 +41,9 @@ import {
   safeToSpend,
   type FonteRecorrente,
 } from "@/lib/futuro";
+import { AvatarPerfil } from "@/components/avatar-perfil";
 import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
+import { dadosPerfil, primeiroNome } from "@/lib/perfil";
 import { detetarRecorrencias, type TxRecorrencia } from "@/lib/recorrencias";
 import {
   COLUNAS_ORCAMENTO,
@@ -98,6 +100,11 @@ function saudacao(): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const perfil = dadosPerfil(user);
 
   const inicioHistorico = new Date();
   inicioHistorico.setMonth(inicioHistorico.getMonth() - MESES_FETCH);
@@ -338,12 +345,26 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between pt-1">
         <div>
-          <p className="text-sm text-muted-foreground">{saudacao()} 👋</p>
+          <p className="text-sm text-muted-foreground">
+            {saudacao()}
+            {perfil.nome ? `, ${primeiroNome(perfil.nome, perfil.email)}` : ""} 👋
+          </p>
           <h1 className="text-xl font-bold">As tuas finanças</h1>
         </div>
-        <span className="flex size-10 items-center justify-center rounded-full bg-primary/12 text-sm font-bold text-primary">
-          ML
-        </span>
+        <Link
+          href="/definicoes"
+          aria-label="Perfil e definições"
+          className="transition-transform active:scale-90"
+        >
+          <AvatarPerfil
+            nome={perfil.nome}
+            email={perfil.email}
+            avatarUrl={perfil.avatarUrl}
+            cor={perfil.cor}
+            className="size-10"
+            textoClassName="text-sm"
+          />
+        </Link>
       </div>
 
       {aRenovar.length > 0 && (
