@@ -2,11 +2,8 @@
 
 import { useFormStatus } from "react-dom";
 import { Loader2, type LucideIcon } from "lucide-react";
+import { TILE_ACAO } from "@/lib/estilos";
 import { cn } from "@/lib/utils";
-
-/** Estilo base de um "tile" de ação: ícone em cima, rótulo pequeno em baixo. */
-export const TILE_ACAO =
-  "flex flex-1 basis-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-border/60 bg-card p-3 text-[11px] font-medium shadow-sm transition-all hover:bg-muted/50 active:scale-95";
 
 /**
  * Botão de submit em forma de tile (ícone + rótulo), com spinner no lugar do

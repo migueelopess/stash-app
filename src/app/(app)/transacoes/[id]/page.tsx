@@ -10,12 +10,13 @@ import {
 import { BotaoSubmit } from "@/components/botao-submit";
 import { IconeCategoria } from "@/components/icone-categoria";
 import { OpcaoAprendizagem } from "@/components/opcao-aprendizagem";
-import { TILE_ACAO, TileSubmit } from "@/components/tile-acao";
+import { TileSubmit } from "@/components/tile-acao";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { extrairPalavraChave } from "@/lib/categorizacao";
 import { carregarCoresOverride, corCategoria } from "@/lib/cores";
+import { TILE_ACAO } from "@/lib/estilos";
 import { formatarData, formatarEuros } from "@/lib/format";
 import { chaveDoNome, resolverNome } from "@/lib/nomes-comerciantes";
 import { createClient } from "@/lib/supabase/server";
