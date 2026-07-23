@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { SeletorMes } from "@/components/seletor-mes";
 import { cn } from "@/lib/utils";
 
 interface Conta {
@@ -14,7 +15,7 @@ interface Opcao {
   rotulo: string;
 }
 
-/** Fila horizontal de filtros em pills — aplicam-se logo ao escolher. */
+/** Filtros das transações: mês em stepper + tipo/conta em pills. */
 export function FiltrosTransacoes({
   contas,
   meses,
@@ -49,46 +50,41 @@ export function FiltrosTransacoes({
   const conta = params.get("conta") ?? "";
 
   return (
-    <div className="sem-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-0.5">
-      <select
-        aria-label="Mês"
-        value={mes}
-        onChange={(e) => definir("mes", e.target.value)}
-        className={pill(mes !== "")}
-      >
-        <option value="">Todos os meses</option>
-        {meses.map((m) => (
-          <option key={m.valor} value={m.valor}>
-            {m.rotulo}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label="Tipo"
-        value={tipo}
-        onChange={(e) => definir("tipo", e.target.value)}
-        className={pill(tipo !== "")}
-      >
-        <option value="">Ganhos e gastos</option>
-        <option value="ganhos">Só ganhos</option>
-        <option value="gastos">Só gastos</option>
-        <option value="movimentos">Só movimentos</option>
-      </select>
-      {contas.length > 1 && (
+    <div className="flex flex-col gap-2">
+      <SeletorMes
+        meses={meses}
+        valor={mes}
+        aoMudar={(m) => definir("mes", m)}
+        permitirTodos
+      />
+      <div className="sem-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-0.5">
         <select
-          aria-label="Conta"
-          value={conta}
-          onChange={(e) => definir("conta", e.target.value)}
-          className={pill(conta !== "")}
+          aria-label="Tipo"
+          value={tipo}
+          onChange={(e) => definir("tipo", e.target.value)}
+          className={pill(tipo !== "")}
         >
-          <option value="">Todas as contas</option>
-          {contas.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name ?? c.iban ?? "Conta"}
-            </option>
-          ))}
+          <option value="">Ganhos e gastos</option>
+          <option value="ganhos">Só ganhos</option>
+          <option value="gastos">Só gastos</option>
+          <option value="movimentos">Só movimentos</option>
         </select>
-      )}
+        {contas.length > 1 && (
+          <select
+            aria-label="Conta"
+            value={conta}
+            onChange={(e) => definir("conta", e.target.value)}
+            className={pill(conta !== "")}
+          >
+            <option value="">Todas as contas</option>
+            {contas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name ?? c.iban ?? "Conta"}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
     </div>
   );
 }

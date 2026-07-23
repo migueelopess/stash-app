@@ -292,11 +292,11 @@ export default async function TransacoesPage({
                       movimento={movimento}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
+                      <p className="truncate text-[15px] font-semibold">
                         {t.custom_name ??
                           resolverNome(t.description, t.counterparty, nomes)}
                       </p>
-                      <p className="truncate text-xs text-muted-foreground">
+                      <p className="truncate text-xs font-medium text-muted-foreground">
                         {movimento
                           ? "Movimento"
                           : t.categories?.name ?? "Por categorizar"}
@@ -304,7 +304,7 @@ export default async function TransacoesPage({
                     </div>
                     <p
                       className={cn(
-                        "shrink-0 text-sm font-semibold tabular-nums",
+                        "shrink-0 text-[15px] font-bold tabular-nums",
                         movimento
                           ? "text-muted-foreground"
                           : valor > 0 && "text-emerald-600 dark:text-emerald-400"
